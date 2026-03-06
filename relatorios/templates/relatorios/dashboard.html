@@ -1,282 +1,282 @@
-{% extends "base.html" %}
+{% extends "base_app.html" %}
 {% load relatorios_filters %}
 {% block title %}Dashboard - Relatórios{% endblock %}
+{% block extra_css %}
+<style>
+  .dashboard-faixa .grafico { background: #fff; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; min-height: 280px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .sidebar-filters-content .filtro-dropdown .dropdown-pesquisa { margin-bottom: 0.3rem; padding: 0.45rem 0.6rem; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; background: rgba(255,255,255,0.08); color: #fff; width: 100%; box-sizing: border-box; }
+  .chart-scroll { overflow-y: scroll; overflow-x: hidden; min-height: 0; -webkit-overflow-scrolling: touch; }
+  .chart-scroll::-webkit-scrollbar { width: 10px; }
+  .chart-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+  .chart-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+  .chart-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
+  .chart-canvas-wrap { display: block; }
+</style>
+{% endblock %}
+{% block sidebar_filters %}
+  <div class="sidebar-filter-actions">
+    <button type="submit" class="btn-filtrar">Filtrar</button>
+    <a href="{% url 'dashboard' %}?nocache=1" class="btn-limpar">Limpar filtros</a>
+  </div>
+  <div class="field">
+    <label>Data início</label>
+    <input type="date" name="data_inicio" value="{{ data_inicio|date:'Y-m-d' }}">
+  </div>
+  <div class="field">
+    <label>Data fim</label>
+    <input type="date" name="data_fim" value="{{ data_fim|date:'Y-m-d' }}">
+  </div>
+  <div class="field">
+    <label>Agrupamento</label>
+    <select name="agrupamento"><option value="dia" {% if request.GET.agrupamento == 'mes' %}{% else %}selected{% endif %}>Dia</option><option value="mes" {% if request.GET.agrupamento == 'mes' %}selected{% endif %}>Mês</option></select>
+  </div>
+  <div class="field">
+    <label>Pesquisar</label>
+    <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Nota, cliente, produto...">
+  </div>
+  {% if filiais %}
+  <div class="field">
+    <label>Filial</label>
+    <select name="codfilial" id="select-codfilial"><option value="">Todas</option>{% for f in filiais %}<option value="{{ f }}" {% if request.GET.codfilial == f %}selected{% endif %}>{{ f }}</option>{% endfor %}</select>
+  </div>
+  {% endif %}
+  {% if supervisores %}
+  <div class="field">
+    <label>Supervisor</label>
+    <select name="supervisor" id="select-supervisor"><option value="">Todos</option>{% for s in supervisores %}<option value="{{ s }}" {% if request.GET.supervisor == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+  </div>
+  {% endif %}
+  {% if vendedores %}
+  <div class="field">
+    <label>Vendedor</label>
+    <select name="vendedor" id="select-vendedor"><option value="">Todos</option>{% for v in vendedores %}<option value="{{ v }}" {% if request.GET.vendedor == v %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
+  </div>
+  {% endif %}
+  {% if clientes %}
+  <div class="field filtro-dropdown">
+    <label>Cliente</label>
+    <input type="text" class="dropdown-pesquisa" placeholder="Filtrar..." data-target="select-cliente" autocomplete="off">
+    <select name="cliente" id="select-cliente"><option value="">Todos</option>{% for c in clientes %}<option value="{{ c }}" {% if request.GET.cliente == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
+  </div>
+  {% endif %}
+  {% if fornecedores_opcoes %}
+  <div class="field filtro-dropdown">
+    <label>Fornecedor</label>
+    <input type="text" class="dropdown-pesquisa" placeholder="Filtrar..." data-target="select-fornecedor" autocomplete="off">
+    <select name="fornecedor" id="select-fornecedor"><option value="">Todos</option>{% for f in fornecedores_opcoes %}<option value="{{ f }}" {% if request.GET.fornecedor == f %}selected{% endif %}>{{ f }}</option>{% endfor %}</select>
+  </div>
+  {% endif %}
+  {% if produtos %}
+  <div class="field filtro-dropdown">
+    <label>Produto</label>
+    <input type="text" class="dropdown-pesquisa" placeholder="Filtrar..." data-target="select-produto" autocomplete="off">
+    <select name="produto" id="select-produto"><option value="">Todos</option>{% for p in produtos %}<option value="{{ p }}" {% if request.GET.produto == p %}selected{% endif %}>{{ p }}</option>{% endfor %}</select>
+  </div>
+  {% endif %}
+{% endblock %}
 {% block content %}
 <style>
-  .dashboard-wrap { display: flex; gap: 0; align-items: stretch; margin-bottom: 1rem; margin-left: calc(-1 * (100vw - 100%) / 2 - 1rem); margin-top: -1rem; min-height: calc(100vh - 2.5rem); }
-  .sidebar-wrapper { display: flex; flex-shrink: 0; align-items: stretch; min-height: 100%; }
-  .filtros-sidebar { width: 72px; min-width: 72px; min-height: 100%; background: #2c3e50; border-radius: 0 4px 4px 0; box-shadow: 4px 0 20px rgba(0,0,0,0.15); transition: width 0.3s ease, min-width 0.3s ease; overflow: hidden; display: flex; flex-direction: column; }
-  .dashboard-wrap.sidebar-aberto .filtros-sidebar { width: 280px; min-width: 280px; }
-  .filtros-sidebar .sidebar-collapsed { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1rem 0.5rem; cursor: pointer; flex: 1; min-height: 100%; width: 100%; box-sizing: border-box; position: relative; z-index: 1; }
-  .dashboard-wrap.sidebar-aberto .filtros-sidebar .sidebar-collapsed { display: none; }
-  .filtros-sidebar .sidebar-collapsed .sidebar-hamburger { display: flex; align-items: center; justify-content: center; width: 100%; flex-shrink: 0; pointer-events: none; font-size: 1.75rem; line-height: 1; color: #fff; }
-  .filtros-sidebar .sidebar-collapsed:hover { background: rgba(255,255,255,0.05); }
-  .filtros-sidebar .sidebar-expanded { display: none; padding: 1rem 1rem 1rem 1.4rem; overflow-x: visible; overflow-y: auto; flex: 1; min-height: 0; }
-  .dashboard-wrap.sidebar-aberto .filtros-sidebar .sidebar-expanded { display: block; }
-  .filtros-sidebar .filtros-header { margin: 0 0 1.25rem; display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: #fff; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-  .filtros-sidebar .filtros-header .filtros-icon { width: 18px; height: 18px; flex-shrink: 0; color: #2c3e50; opacity: 0.9; }
-  .filtros-sidebar .filtros-header .filtros-titulo { flex: 1; font-size: 0.9rem; font-weight: 600; color: #2c3e50; letter-spacing: 0.01em; }
-  .filtros-sidebar .btn-fechar { background: transparent; border: none; color: #7f8c8d; cursor: pointer; padding: 0.2rem 0.35rem; font-size: 1.1rem; line-height: 1; border-radius: 4px; transition: color 0.2s, background 0.2s; }
-  .filtros-sidebar .btn-fechar:hover { color: #2c3e50; background: rgba(0,0,0,0.06); }
-  .filtros-sidebar .filtro-item { margin-bottom: 1rem; }
-  .filtros-sidebar .filtro-item label { display: block; font-size: 0.8rem; color: #bdc3c7; margin-bottom: 0.35rem; font-weight: 500; letter-spacing: 0.01em; padding-left: 0.2rem; }
-  .filtros-sidebar .filtro-item { max-width: 100%; }
-  .filtros-sidebar .filtro-item input,
-  .filtros-sidebar .filtro-item select { width: 100%; max-width: 100%; padding: 0.5rem 0.65rem; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; box-sizing: border-box; background: rgba(255,255,255,0.08); color: #ecf0f1; font-size: 0.9rem; }
-  .filtros-sidebar .filtro-item input::placeholder { color: #95a5a6; }
-  .filtros-sidebar .filtro-item select option { background: #34495e; color: #ecf0f1; }
-  .filtros-sidebar .btn { width: 100%; margin-top: 0.5rem; padding: 0.55rem 1rem; border-radius: 8px; font-weight: 500; transition: opacity 0.2s, transform 0.05s; }
-  .filtros-sidebar .btn-primary { background: #22c55e; color: #fff; border: none; }
-  .filtros-sidebar .btn-primary:hover { opacity: 0.92; }
-  .filtros-sidebar .btn-secondary { background: rgba(255,255,255,0.1); color: #ecf0f1; }
-  .filtros-sidebar .btn-secondary:hover { background: rgba(255,255,255,0.15); }
-  .filtros-sidebar .filtro-dropdown { max-width: 100%; }
-  .filtros-sidebar .filtro-dropdown .dropdown-pesquisa { padding: 0.45rem 0.6rem; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; background: rgba(255,255,255,0.08); color: #ecf0f1; width: 100%; max-width: 100%; box-sizing: border-box; margin-bottom: 0.3rem; }
-  .dashboard-main { flex: 1; min-width: 0; margin-left: 0; padding-left: 1rem; padding-right: 1rem; padding-top: 1rem; max-width: 1200px; }
-  .dashboard-faixa { margin-left: 0; padding-left: 0; }
-  .dashboard-faixa .grafico { margin-left: 0; }
-  .filtros-linha { display: flex; flex-wrap: nowrap; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; }
-  .filtros-linha .filtro-dropdown { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.9rem; flex: 1; min-width: 0; max-width: 240px; }
-  .filtros-linha .filtro-dropdown > span { font-weight: 500; }
-  .filtros-linha .filtro-dropdown .dropdown-pesquisa { margin-bottom: 0; }
-  .filtros-linha .filtro-dropdown select { padding: 0.5rem 0.6rem; border: 1px solid #ddd; border-radius: 4px; min-height: 2.25rem; width: 100%; box-sizing: border-box; }
+  .cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+  @media (max-width: 900px) { .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 500px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .card { background: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .card h3 { margin: 0 0 0.25rem; font-size: 0.85rem; color: #64748b; }
+  .card .valor { font-size: 1rem; font-weight: 600; }
 </style>
-<form method="get" id="form-filtros">
-  <div class="dashboard-wrap" id="dashboard-wrap">
-    <div class="sidebar-wrapper">
-    <aside class="filtros-sidebar" id="filtros-sidebar">
-      <div class="sidebar-collapsed" id="sidebar-collapsed" role="button" tabindex="0" title="Abrir filtros" aria-label="Expandir filtros">
-        <div class="sidebar-hamburger" aria-hidden="true">&#9776;</div>
-      </div>
-      <div class="sidebar-expanded" id="sidebar-expanded">
-      <div class="filtros-header">
-        <svg class="filtros-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-        <span class="filtros-titulo">Filtros</span>
-        <button type="button" class="btn-fechar" id="sidebar-fechar" title="Recolher" aria-label="Recolher">‹</button>
-      </div>
-      <div class="filtro-item">
-        <label>Data início</label>
-        <input type="date" name="data_inicio" value="{{ data_inicio|date:'Y-m-d' }}">
-      </div>
-      <div class="filtro-item">
-        <label>Data fim</label>
-        <input type="date" name="data_fim" value="{{ data_fim|date:'Y-m-d' }}">
-      </div>
-      <div class="filtro-item">
-        <label>Agrupamento</label>
-        <select name="agrupamento"><option value="dia" {% if request.GET.agrupamento == 'mes' %}{% else %}selected{% endif %}>Dia</option><option value="mes" {% if request.GET.agrupamento == 'mes' %}selected{% endif %}>Mês</option></select>
-      </div>
-      <div class="filtro-item">
-        <label>Pesquisar</label>
-        <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Nota, cliente, produto...">
-      </div>
-      {% if clientes %}
-      <div class="filtro-item filtro-dropdown">
-        <label>Cliente</label>
-        <input type="text" class="dropdown-pesquisa" placeholder="Filtrar..." data-target="select-cliente" autocomplete="off">
-        <select name="cliente" id="select-cliente"><option value="">Todos</option>{% for c in clientes %}<option value="{{ c }}" {% if request.GET.cliente == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
-      </div>
-      {% endif %}
-      {% if fornecedores_opcoes %}
-      <div class="filtro-item filtro-dropdown">
-        <label>Fornecedor</label>
-        <input type="text" class="dropdown-pesquisa" placeholder="Filtrar..." data-target="select-fornecedor" autocomplete="off">
-        <select name="fornecedor" id="select-fornecedor"><option value="">Todos</option>{% for f in fornecedores_opcoes %}<option value="{{ f }}" {% if request.GET.fornecedor == f %}selected{% endif %}>{{ f }}</option>{% endfor %}</select>
-      </div>
-      {% endif %}
-      {% if produtos %}
-      <div class="filtro-item filtro-dropdown">
-        <label>Produto</label>
-        <input type="text" class="dropdown-pesquisa" placeholder="Filtrar..." data-target="select-produto" autocomplete="off">
-        <select name="produto" id="select-produto"><option value="">Todos</option>{% for p in produtos %}<option value="{{ p }}" {% if request.GET.produto == p %}selected{% endif %}>{{ p }}</option>{% endfor %}</select>
-      </div>
-      {% endif %}
-      <button type="submit" class="btn btn-primary">Filtrar</button>
-      <a href="{% url 'dashboard' %}" class="btn btn-secondary" style="margin-top:0.35rem;">Limpar filtros</a>
-      </div>
-    </aside>
-    </div>
-    <div class="dashboard-main">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem;">
-        <h1 style="margin:0;">Dashboard de Vendas</h1>
-        <div style="display:flex; gap:0.5rem;">
-          <a href="{% url 'relatorio_detalhado' %}?{{ request.GET.urlencode }}" class="btn btn-primary">Ver relatório detalhado</a>
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem;">
+    <h1 style="margin:0;">Dashboard de Vendas</h1>
+    <a href="{% url 'relatorio_detalhado' %}?{{ request.GET.urlencode }}" class="btn btn-primary">Ver relatório detalhado</a>
+  </div>
+
+  {% if periodo_disponivel %}
+  <div style="margin-bottom:1rem; padding:1rem; background:#fef3c7; border:1px solid #f59e0b; border-radius:8px; color:#92400e;">
+    <strong>Por que está vazio?</strong> O filtro &quot;mês atual&quot; usa a <strong>data do servidor</strong>. Se o servidor estiver em outro ano (ex.: 2025), o período fica diferente dos dados do CSV (ex.: 2026).<br>
+    Os dados na base vão de <strong>{{ periodo_disponivel.0|date:'d/m/Y' }}</strong> a <strong>{{ periodo_disponivel.1|date:'d/m/Y' }}</strong>. Ajuste <strong>Data início</strong> e <strong>Data fim</strong> nos filtros à esquerda para esse período e clique em Filtrar.
+  </div>
+  {% endif %}
+
+  <div class="cards">
+    <div class="card"><h3>Total vendido</h3><span class="valor">{{ cards.total_vendido|br_currency }}</span></div>
+    <div class="card"><h3>Qtd itens</h3><span class="valor">{{ cards.qtd_itens|br_int_sep }}</span></div>
+    <div class="card"><h3>Peso total</h3><span class="valor">{{ cards.peso_total|br_decimal_sep }}</span></div>
+    <div class="card"><h3>Devolução</h3><span class="valor">{{ cards.devolucao|br_currency }}</span></div>
+    <div class="card"><h3>Ticket médio</h3><span class="valor">{{ cards.ticket_medio|br_currency }}</span></div>
+    <div class="card"><h3>Nº notas</h3><span class="valor">{{ cards.num_notas|br_int_sep }}</span></div>
+  </div>
+
+  <section class="dashboard-faixa" style="margin-top:1.5rem;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; min-width: 0;">
+      <div class="grafico" style="min-width: 0;">
+        <h3>Vendas por {% if agrupamento == 'mes' %}mês{% else %}dia{% endif %}</h3>
+        <div style="height:280px; min-width:300px; position:relative;">
+          <canvas id="chartVendasDia" width="400" height="280" style="max-width:100%;"></canvas>
         </div>
       </div>
-      <div class="filtros-linha">
-        {% if filiais %}
-        <div class="filtro-dropdown">
-          <span>Filial</span>
-          <input type="text" class="dropdown-pesquisa" placeholder="Filtrar..." data-target="select-codfilial" autocomplete="off">
-          <select name="codfilial" id="select-codfilial"><option value="">Todas</option>{% for f in filiais %}<option value="{{ f }}" {% if request.GET.codfilial == f %}selected{% endif %}>{{ f }}</option>{% endfor %}</select>
+      <div class="grafico" style="min-width: 0;">
+        <h3>Top 10 clientes</h3>
+        <div class="chart-scroll" style="height:320px; min-width:300px;">
+          <div class="chart-canvas-wrap"><canvas id="chartCliente"></canvas></div>
         </div>
-        {% endif %}
-        {% if supervisores %}
-        <div class="filtro-dropdown">
-          <span>Supervisor</span>
-          <input type="text" class="dropdown-pesquisa" placeholder="Filtrar..." data-target="select-supervisor" autocomplete="off">
-          <select name="supervisor" id="select-supervisor"><option value="">Todos</option>{% for s in supervisores %}<option value="{{ s }}" {% if request.GET.supervisor == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+      </div>
+    </div>
+  </section>
+
+  <section class="dashboard-faixa" style="margin-top:1.5rem;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <div class="grafico">
+        <h3>{{ fornecedores_label|default:"Top 10 fornecedores" }}</h3>
+        <div class="chart-scroll" style="height:320px;">
+          <div class="chart-canvas-wrap"><canvas id="chartFornecedor"></canvas></div>
         </div>
-        {% endif %}
-        {% if vendedores %}
-        <div class="filtro-dropdown">
-          <span>Vendedor</span>
-          <input type="text" class="dropdown-pesquisa" placeholder="Filtrar..." data-target="select-vendedor" autocomplete="off">
-          <select name="vendedor" id="select-vendedor"><option value="">Todos</option>{% for v in vendedores %}<option value="{{ v }}" {% if request.GET.vendedor == v %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
+      </div>
+      <div class="grafico">
+        <h3>Top 10 produtos</h3>
+        <div class="chart-scroll" style="height:320px;">
+          <div class="chart-canvas-wrap"><canvas id="chartProduto"></canvas></div>
         </div>
-        {% endif %}
-        <button type="submit" class="btn btn-primary" style="align-self:flex-end;">Filtrar</button>
-        <a href="{% url 'dashboard' %}" class="btn btn-secondary" style="align-self:flex-end;">Limpar filtros</a>
       </div>
+    </div>
+  </section>
 
-<div class="cards">
-  <div class="card"><h3>Total vendido</h3><span class="valor">{{ cards.total_vendido|br_currency_short }}</span></div>
-  <div class="card"><h3>Qtd itens</h3><span class="valor">{{ cards.qtd_itens|br_int_short }}</span></div>
-  <div class="card"><h3>Peso total</h3><span class="valor">{{ cards.peso_total|br_decimal_short }}</span></div>
-  <div class="card"><h3>Devolução</h3><span class="valor">{{ cards.devolucao|br_currency_short }}</span></div>
-  <div class="card"><h3>Ticket médio</h3><span class="valor">{{ cards.ticket_medio|br_currency_short }}</span></div>
-  <div class="card"><h3>Nº notas</h3><span class="valor">{{ cards.num_notas|br_int }}</span></div>
-</div>
+  <section class="dashboard-faixa" style="margin-top:1.5rem;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <div class="grafico">
+        <h3>Top 10 supervisores</h3>
+        <div class="chart-scroll" style="height:320px;">
+          <div class="chart-canvas-wrap"><canvas id="chartSupervisor"></canvas></div>
+        </div>
+      </div>
+      <div class="grafico">
+        <h3>Top 10 vendedores</h3>
+        <div class="chart-scroll" style="height:320px;">
+          <div class="chart-canvas-wrap"><canvas id="chartVendedor"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<section class="dashboard-faixa" style="margin-top:1.5rem;">
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-    <div class="grafico">
-      <h3>Vendas por dia</h3>
-      <div style="height:280px;">
-        <canvas id="chartVendasDia" width="400" height="280"></canvas>
-      </div>
-    </div>
-    <div class="grafico">
-      <h3>Top 10 clientes (rolar para ver mais)</h3>
-      <div class="chart-scroll" style="max-height:320px; overflow-y:auto;">
-        <canvas id="chartCliente"></canvas>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="dashboard-faixa" style="margin-top:1.5rem;">
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-    <div class="grafico">
-      <h3>{{ fornecedores_label|default:"Top 10 fornecedores (rolar para ver mais)" }}</h3>
-      <div class="chart-scroll" style="max-height:320px; overflow-y:auto;">
-        <canvas id="chartFornecedor"></canvas>
-      </div>
-    </div>
-    <div class="grafico">
-      <h3>Top 10 produtos (rolar para ver mais)</h3>
-      <div class="chart-scroll" style="max-height:320px; overflow-y:auto;">
-        <canvas id="chartProduto"></canvas>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="dashboard-faixa" style="margin-top:1.5rem;">
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-    <div class="grafico">
-      <h3>Top 10 supervisores (rolar para ver mais)</h3>
-      <div class="chart-scroll" style="max-height:320px; overflow-y:auto;">
-        <canvas id="chartSupervisor"></canvas>
-      </div>
-    </div>
-    <div class="grafico">
-      <h3>Top 10 vendedores (rolar para ver mais)</h3>
-      <div class="chart-scroll" style="max-height:320px; overflow-y:auto;">
-        <canvas id="chartVendedor"></canvas>
-      </div>
-    </div>
-  </div>
-</section>
-
-    </div>
-  </div>
-</form>
 <script>
 (function(){
-  var wrap = document.getElementById('dashboard-wrap');
-  var collapsedEl = document.getElementById('sidebar-collapsed');
-  var fecharBtn = document.getElementById('sidebar-fechar');
-  if (wrap && collapsedEl) {
-    collapsedEl.addEventListener('click', function(){ wrap.classList.add('sidebar-aberto'); });
-    collapsedEl.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); wrap.classList.add('sidebar-aberto'); } });
-  }
-  if (wrap && fecharBtn) {
-    fecharBtn.addEventListener('click', function(){ wrap.classList.remove('sidebar-aberto'); });
+  var form = document.getElementById('form-filtros');
+  if (form) {
+    form.querySelectorAll('.dropdown-pesquisa').forEach(function(inp){
+      var targetId = inp.getAttribute('data-target');
+      if (!targetId) return;
+      var sel = form.querySelector('#' + targetId);
+      if (!sel) return;
+      inp.addEventListener('input', function(){
+        var v = (this.value || '').toLowerCase();
+        [].slice.call(sel.options).forEach(function(opt){
+          opt.style.display = (!v || (opt.text || '').toLowerCase().indexOf(v) >= 0) ? '' : 'none';
+        });
+      });
+    });
   }
 })();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{{ serie_temporal|json_script:"serie-temporal-data" }}
+{{ top_clientes|json_script:"top-clientes-data" }}
+{{ top_fornecedores|json_script:"top-fornecedores-data" }}
+{{ top_produtos|json_script:"top-produtos-data" }}
+{{ vendas_por_supervisor|json_script:"vendas-supervisor-data" }}
+{{ top_vendedores|json_script:"top-vendedores-data" }}
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
 <script>
 (function(){
-  const BAR_HEIGHT = 32;
-  const MIN_CHART_HEIGHT = 320;
-
-  function makeScrollableBarChart(canvasId, data, labelKey, valueKey, color) {
-    const arr = data || [];
-    const labels = arr.map(function(x){ return (x[labelKey] || '').toString().substring(0, 25); });
-    const values = arr.map(function(x){ return x[valueKey] || 0; });
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const h = Math.max(MIN_CHART_HEIGHT, labels.length * BAR_HEIGHT);
-    canvas.height = h;
-    canvas.width = canvas.offsetWidth || 400;
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{ label: '', data: values, backgroundColor: color }]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { beginAtZero: true, title: { display: false }, ticks: { display: false } },
-          y: { ticks: { font: { size: 11 } }, title: { display: false } }
-        }
-      }
-    });
+  function parseJsonScript(id) {
+    var el = document.getElementById(id);
+    if (!el || !el.textContent) return [];
+    try { return JSON.parse(el.textContent.trim()); } catch (e) { return []; }
   }
-
-  // Faixa 1: Vendas por dia (eixo X 01/jan/26)
-  const serie = {{ serie_temporal|safe }};
-  const serieLabels = (serie || []).map(function(x){ return x.label || (x.periodo ? x.periodo.substring(0,10) : ''); });
-  const serieData = (serie || []).map(function(x){ return x.valor || 0; });
-  new Chart(document.getElementById('chartVendasDia'), {
-    type: 'line',
-    data: {
-      labels: serieLabels,
-      datasets: [{ label: 'Vendas', data: serieData, borderColor: '#3498db', backgroundColor: 'rgba(52, 152, 219, 0.1)', fill: true }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { maxRotation: 45, font: { size: 10 } }, title: { display: false } },
-        y: { beginAtZero: true, title: { display: false }, ticks: { display: false } }
+  function formatBr(val) {
+    var n = Number(val);
+    if (isNaN(n) || n >= 1e12) return (n / 1e9).toFixed(1) + 'Bi';
+    if (n >= 1e9) return (n / 1e9).toFixed(1) + 'Bi';
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+    return n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+  function placeholder(canvasId, msg) {
+    var canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    canvas.width = Math.max(canvas.offsetWidth || 0, 400);
+    canvas.height = 280;
+    ctx.font = '14px sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.textAlign = 'center';
+    ctx.fillText(msg || 'Sem dados', canvas.width / 2, canvas.height / 2);
+  }
+  function drawCharts() {
+    if (typeof Chart === 'undefined') {
+      ['chartVendasDia','chartCliente','chartFornecedor','chartProduto','chartSupervisor','chartVendedor'].forEach(function(id){ placeholder(id, 'Carregando Chart.js...'); });
+      return;
+    }
+    var serie = parseJsonScript('serie-temporal-data');
+    var serieLabels = serie.map(function(x){ return (x.label || (x.periodo || '').substring(0,10)); });
+    var serieData = serie.map(function(x){ return Number(x.valor) || 0; });
+    var canvasVendas = document.getElementById('chartVendasDia');
+    if (canvasVendas) {
+      if (serieLabels.length === 0 || serieData.length === 0) {
+        placeholder('chartVendasDia', 'Sem dados no período');
+      } else {
+        try {
+          new Chart(canvasVendas, {
+            type: 'line',
+            data: { labels: serieLabels, datasets: [{ label: 'Vendas', data: serieData, borderColor: '#3498db', backgroundColor: 'rgba(52,152,219,0.1)', fill: true }] },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c){ return 'R$ ' + (c.raw||0).toLocaleString('pt-BR',{minimumFractionDigits:2}); } } } },
+              scales: { x: { ticks: { maxRotation: 45, font: { size: 10 } } }, y: { beginAtZero: true, ticks: { callback: function(v){ return formatBr(v); }, font: { size: 10 } } } }
+            }
+          });
+        } catch (e) { placeholder('chartVendasDia', 'Erro: ' + (e.message || 'gráfico')); }
       }
     }
-  });
-
-  // Faixa 1: Top clientes (barra vertical com scroll)
-  const clientes = {{ top_clientes|safe }};
-  makeScrollableBarChart('chartCliente', clientes, 'cliente', 'valor', '#27ae60');
-
-  // Faixa 3: Fornecedores e Produtos
-  const fornecedores = {{ top_fornecedores|safe }};
-  const produtos = {{ top_produtos|safe }};
-  makeScrollableBarChart('chartFornecedor', fornecedores, 'fornecedor', 'valor', '#9b59b6');
-  makeScrollableBarChart('chartProduto', produtos, 'produto', 'valor', '#1abc9c');
-
-  // Faixa 4: Supervisores e Vendedores
-  const supervisores = {{ vendas_por_supervisor|safe }};
-  const vendedores = {{ top_vendedores|safe }};
-  makeScrollableBarChart('chartSupervisor', supervisores, 'supervisor', 'valor', '#e67e22');
-  makeScrollableBarChart('chartVendedor', vendedores, 'vendedor', 'valor', '#e74c3c');
+    var BAR_HEIGHT_PX = 32;
+    function barChart(canvasId, arr, labelKey, valueKey, color) {
+      arr = Array.isArray(arr) ? arr : [];
+      var labels = arr.map(function(x){ return (x[labelKey]||'').toString().substring(0,25); });
+      var values = arr.map(function(x){ return Number(x[valueKey])||0; });
+      var canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      if (labels.length === 0) { placeholder(canvasId, 'Sem dados'); return; }
+      try {
+        var h = Math.max(320, labels.length * BAR_HEIGHT_PX);
+        canvas.height = h;
+        canvas.width = Math.max(canvas.offsetWidth || 0, 400);
+        canvas.style.display = 'block';
+        var wrap = canvas.parentElement;
+        if (wrap && wrap.classList && wrap.classList.contains('chart-canvas-wrap')) wrap.style.minHeight = h + 'px';
+        new Chart(canvas.getContext('2d'), {
+          type: 'bar',
+          data: { labels: labels, datasets: [{ label: 'Valor', data: values, backgroundColor: color, borderRadius: 6 }] },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            barPercentage: 0.9,
+            categoryPercentage: 1,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c){ return 'R$ ' + (c.raw||0).toLocaleString('pt-BR',{minimumFractionDigits:2}); } } } },
+            scales: { x: { beginAtZero: true, ticks: { callback: function(v){ return formatBr(v); }, font: { size: 10 } } }, y: { ticks: { font: { size: 11 }, autoSkip: false } } }
+          }
+        });
+      } catch (e) { placeholder(canvasId, 'Erro'); }
+    }
+    barChart('chartCliente', parseJsonScript('top-clientes-data'), 'cliente', 'valor', '#27ae60');
+    barChart('chartFornecedor', parseJsonScript('top-fornecedores-data'), 'fornecedor', 'valor', '#9b59b6');
+    barChart('chartProduto', parseJsonScript('top-produtos-data'), 'produto', 'valor', '#1abc9c');
+    barChart('chartSupervisor', parseJsonScript('vendas-supervisor-data'), 'supervisor', 'valor', '#e67e22');
+    barChart('chartVendedor', parseJsonScript('top-vendedores-data'), 'vendedor', 'valor', '#e74c3c');
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(drawCharts, 150); });
+  } else {
+    setTimeout(drawCharts, 150);
+  }
 })();
 </script>
 {% endblock %}

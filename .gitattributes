@@ -1,0 +1,2 @@
+# Garantir LF em scripts shell (evita "no such file or directory" no Docker/Linux)
+*.sh text eol=lf

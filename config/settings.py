@@ -58,11 +58,26 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# SQLite para dev; Postgres em produção via DATABASE_URL
+# SQLite para dev; em Docker use DATABASE_PATH (ex.: /app/db/db.sqlite3)
+_db_path = os.environ.get('DATABASE_PATH')
+if _db_path:
+    _db_name = str(_db_path)
+else:
+    _db_name = str(BASE_DIR / 'db.sqlite3')
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': _db_name,
+    }
+}
+
+# Cache para relatórios (dashboard e opções de filtro) — reduz consultas repetidas
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'OPTIONS': {'MAX_ENTRIES': 500},
+        'TIMEOUT': 120,
     }
 }
 
@@ -87,6 +102,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/login/'
+
+# Caminho do CSV para importação de vendas (relativo a BASE_DIR ou absoluto)
+IMPORT_VENDAS_CSV_PATH = os.environ.get('IMPORT_VENDAS_CSV_PATH', str(BASE_DIR / 'dados' / 'Relatorio_Fat.csv'))
 
 # Permissões customizadas (códigos)
 PERMISSAO_VER_RELATORIO_VENDAS = 'relatorios.pode_ver_relatorio_vendas'

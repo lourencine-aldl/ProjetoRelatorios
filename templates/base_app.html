@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Relatórios de Vendas{% endblock %}</title>
+  <style>
+    :root {
+      --sidebar-width: 72px;
+      --sidebar-width-open: 280px;
+      --header-bg: #f8fafc;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --sidebar-gradient-start: #1e3a5f;
+      --sidebar-gradient-end: #0f172a;
+      --sidebar-gradient-accent: #334155;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; margin: 0; background: #f1f5f9; color: #334155; }
+    .app-wrap { display: flex; min-height: 100vh; }
+    .app-sidebar {
+      width: var(--sidebar-width);
+      min-width: var(--sidebar-width);
+      background: linear-gradient(180deg, var(--sidebar-gradient-start) 0%, var(--sidebar-gradient-accent) 50%, var(--sidebar-gradient-end) 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem 0;
+      transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      z-index: 100;
+      box-shadow: 4px 0 32px rgba(0,0,0,0.18), 0 0 0 1px rgba(255,255,255,0.04) inset;
+      overflow-x: hidden;
+      overflow-y: auto;
+      border-radius: 0 16px 16px 0;
+    }
+    .app-sidebar.open { width: var(--sidebar-width-open); min-width: var(--sidebar-width-open); align-items: stretch; padding-left: 1rem; padding-right: 1rem; }
+    .sidebar-hamburger-btn {
+      width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.06); border: none; cursor: pointer;
+      border-radius: 12px; margin-bottom: 1rem; flex-shrink: 0;
+      color: #fff;
+      transition: background 0.2s ease, transform 0.15s ease;
+    }
+    .sidebar-hamburger-btn:hover { background: rgba(255,255,255,0.12); transform: scale(1.02); }
+    .sidebar-hamburger-btn .hamburger-lines {
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    .sidebar-hamburger-btn .hamburger-lines span {
+      display: block; width: 22px; height: 2px; background: currentColor; border-radius: 1px;
+    }
+    .app-sidebar .nav {
+      display: flex; flex-direction: column; gap: 0.2rem; flex: 0 0 auto;
+    }
+    .app-sidebar .nav a {
+      display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0.75rem;
+      color: rgba(255,255,255,0.88); text-decoration: none; border-radius: 12px;
+      transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+      margin: 0 0.25rem;
+    }
+    .app-sidebar .nav a:hover {
+      background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .app-sidebar .nav a.active {
+      background: linear-gradient(135deg, rgba(37,99,235,0.5) 0%, rgba(29,78,216,0.4) 100%);
+      color: #fff;
+      box-shadow: 0 2px 12px rgba(37,99,235,0.35);
+    }
+    .app-sidebar .nav .icon { width: 22px; height: 22px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .app-sidebar .nav .label { white-space: nowrap; overflow: hidden; display: none; font-weight: 500; }
+    .app-sidebar.open .nav .label { display: block; }
+    .sidebar-filters-section { margin-top: 0.5rem; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .sidebar-filters-icon-only {
+      display: flex; align-items: center; justify-content: center;
+      padding: 0.65rem 0.75rem;
+      color: rgba(255,255,255,0.88); border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+    .sidebar-filters-icon-only:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .app-sidebar.open .sidebar-filters-icon-only { display: none; }
+    .sidebar-filters-content { display: none; flex-direction: column; gap: 0.75rem; padding: 0.5rem 0; overflow-y: auto; min-height: 0; }
+    .app-sidebar.open .sidebar-filters-content { display: flex; }
+    .sidebar-filters-content .filtros-header {
+      display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+      border-radius: 12px; margin-bottom: 0.25rem;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .sidebar-filters-content .filtros-header .filtros-icon { width: 18px; height: 18px; color: #fff; flex-shrink: 0; }
+    .sidebar-filters-content .filtros-header .filtros-titulo { font-size: 0.9rem; font-weight: 600; color: #fff; }
+    .sidebar-filters-content .field { display: flex; flex-direction: column; gap: 0.3rem; }
+    .sidebar-filters-content .field label { font-size: 0.75rem; font-weight: 500; color: rgba(255,255,255,0.85); }
+    .sidebar-filters-content .field input, .sidebar-filters-content .field select {
+      width: 100%; padding: 0.5rem 0.65rem; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
+      background: rgba(255,255,255,0.06); color: #fff; font-size: 0.875rem; box-sizing: border-box;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    .sidebar-filters-content .field input:focus, .sidebar-filters-content .field select:focus {
+      outline: none; border-color: rgba(37,99,235,0.6); background: rgba(255,255,255,0.08);
+    }
+    .sidebar-filters-content .field input::placeholder { color: rgba(255,255,255,0.45); }
+    .sidebar-filters-content .field select option { background: #334155; color: #fff; }
+    .sidebar-filters-content .sidebar-filter-actions { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.25rem; }
+    .sidebar-filters-content .sidebar-filter-actions .btn-filtrar { margin-top: 0; }
+    .sidebar-filters-content .sidebar-filter-actions .btn-limpar { margin-top: 0; }
+    .sidebar-filters-content .btn-filtrar {
+      width: 100%; padding: 0.6rem 1rem; border-radius: 10px; font-weight: 500;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #fff; border: none; cursor: pointer; margin-top: 0.25rem;
+      box-shadow: 0 2px 8px rgba(37,99,235,0.4); transition: box-shadow 0.2s ease, transform 0.1s ease;
+    }
+    .sidebar-filters-content .btn-filtrar:hover { box-shadow: 0 4px 14px rgba(37,99,235,0.5); transform: translateY(-1px); }
+    .sidebar-filters-content .btn-limpar {
+      width: 100%; padding: 0.55rem 1rem; border-radius: 10px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%);
+      color: #fff; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; text-align: center; text-decoration: none; font-size: 0.875rem; margin-top: 0.35rem; display: block;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .sidebar-filters-content .btn-limpar:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.2); color: #fff; }
+    .app-sidebar .nav-bottom {
+      margin-top: auto; padding-top: 1rem;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
+      background: linear-gradient(0deg, rgba(0,0,0,0.15) 0%, transparent 100%);
+      border-radius: 0 0 16px 0;
+    }
+    .app-sidebar .btn-toggle {
+      position: absolute; right: -12px; top: 50%; transform: translateY(-50%);
+      width: 26px; height: 26px; border-radius: 50%;
+      background: linear-gradient(145deg, #fff 0%, #f1f5f9 100%);
+      border: 1px solid rgba(255,255,255,0.3);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2); cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; color: #475569; z-index: 10;
+      transition: box-shadow 0.2s ease, transform 0.15s ease;
+    }
+    .app-sidebar .btn-toggle:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.25); transform: translateY(-50%) scale(1.05); color: #1e3a5f; }
+    .app-main { flex: 1; margin-left: var(--sidebar-width); min-width: 0; display: flex; flex-direction: column; transition: margin-left 0.25s ease; }
+    .app-sidebar.open ~ .app-main { margin-left: var(--sidebar-width-open); }
+    .app-main-inner { flex: 1; padding: 1.5rem; }
+    .btn { padding: 0.5rem 1rem; border-radius: 6px; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 500; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); color: #fff; }
+    .btn-secondary { background: #e2e8f0; color: #475569; }
+    .btn-secondary:hover { background: #cbd5e1; color: #334155; }
+    .btn-success { background: #16a34a; color: #fff; }
+    .btn-success:hover { background: #15803d; color: #fff; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-size: 0.8125rem; }
+    th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    th { background: #334155; color: #fff; font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    tbody tr:nth-child(odd) { background: #fff; }
+    tbody tr:nth-child(even) { background: #f1f5f9; }
+    td.num-negativo { color: #dc2626; font-weight: 500; }
+    .pagination { margin-top: 1rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .pagination a, .pagination span { padding: 0.4rem 0.8rem; background: #e2e8f0; border-radius: 6px; text-decoration: none; color: #334155; font-size: 0.875rem; }
+    .pagination .current { background: var(--accent); color: #fff; }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <form method="get" id="form-filtros" action="{{ request.path }}">
+  <div class="app-wrap">
+    <aside class="app-sidebar" id="app-sidebar" role="navigation">
+      <button type="button" class="btn-toggle" id="sidebar-toggle" aria-label="Expandir ou recolher menu">›</button>
+      <button type="button" class="sidebar-hamburger-btn" id="sidebar-hamburger" aria-label="Menu">
+        <span class="hamburger-lines" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
+      <nav class="nav">
+        <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+          <span class="icon">📊</span><span class="label">Dashboard</span>
+        </a>
+        <a href="{% url 'relatorio_detalhado' %}" class="{% if request.resolver_match.url_name == 'relatorio_detalhado' %}active{% endif %}">
+          <span class="icon">📋</span><span class="label">Relatório</span>
+        </a>
+        <a href="{% url 'dashboard_pbi' %}" class="{% if request.resolver_match.url_name == 'dashboard_pbi' %}active{% endif %}">
+          <span class="icon">📈</span><span class="label">Dashboard PBI</span>
+        </a>
+        <a href="{% url 'admin:index' %}" target="_blank">
+          <span class="icon">⚙</span><span class="label">Admin</span>
+        </a>
+        {% if user.is_staff %}
+        <a href="{% url 'atualizar_dados' %}">
+          <span class="icon">🔄</span><span class="label">Atualizar dados</span>
+        </a>
+        {% endif %}
+      </nav>
+      <div class="sidebar-filters-section">
+        <div class="sidebar-filters-icon-only" id="sidebar-filters-icon" title="Filtros" aria-label="Abrir filtros">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        </div>
+        <div class="sidebar-filters-content" id="sidebar-filters-content">
+          <div class="filtros-header">
+            <svg class="filtros-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            <span class="filtros-titulo">Filtros</span>
+          </div>
+          {% block sidebar_filters %}{% endblock %}
+        </div>
+      </div>
+      <span class="nav-bottom">
+        <a href="{% url 'logout' %}" style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.75rem;color:rgba(255,255,255,0.85);text-decoration:none;border-radius:8px;">
+          <span class="icon">↪</span><span class="label">Sair</span>
+        </a>
+      </span>
+    </aside>
+    <main class="app-main">
+      <div class="app-main-inner">
+        {% if messages %}
+        <ul class="app-messages" style="list-style:none; padding:0; margin:0 0 1rem;">
+          {% for message in messages %}
+          <li style="padding:0.75rem 1rem; border-radius:8px; margin-bottom:0.5rem; background:{% if message.tags == 'error' %}#fef2f2; color:#991b1b; border:1px solid #fecaca{% elif message.tags == 'success' %}#f0fdf4; color:#166534; border:1px solid #bbf7d0{% else %}#f8fafc; color:#334155; border:1px solid #e2e8f0{% endif %};">
+            {{ message }}
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+  </form>
+  <script>
+  (function(){
+    var sidebar = document.getElementById('app-sidebar');
+    var btn = document.getElementById('sidebar-toggle');
+    var hamburger = document.getElementById('sidebar-hamburger');
+    var filtersIcon = document.getElementById('sidebar-filters-icon');
+    function toggleSidebar(){
+      if (sidebar) {
+        sidebar.classList.toggle('open');
+        if (btn) btn.textContent = sidebar.classList.contains('open') ? '‹' : '›';
+      }
+    }
+    if (sidebar && btn) {
+      btn.addEventListener('click', toggleSidebar);
+    }
+    if (hamburger && sidebar) {
+      hamburger.addEventListener('click', toggleSidebar);
+    }
+    if (filtersIcon && sidebar) {
+      filtersIcon.addEventListener('click', function(){ sidebar.classList.add('open'); if (btn) btn.textContent = '‹'; });
+    }
+    /* Sidebar inicia fechada ao abrir a página */
+  })();
+  </script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

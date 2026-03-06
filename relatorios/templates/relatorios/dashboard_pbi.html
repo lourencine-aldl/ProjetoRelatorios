@@ -1,0 +1,119 @@
+{% extends "base_app.html" %}
+{% block title %}Dashboard PBI - Relatórios{% endblock %}
+{% block sidebar_filters %}{% endblock %}
+{% block extra_css %}
+<style>
+  .pbi-page-header { margin-bottom: 1.5rem; }
+  .pbi-page-header h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #0f172a; }
+  .pbi-page-header .subtitle { margin: 0.25rem 0 0; font-size: 0.9rem; color: #64748b; }
+  .pbi-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .pbi-option {
+    display: block;
+    padding: 1rem 1.5rem;
+    background: #fff;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    text-decoration: none;
+    color: #334155;
+    font-weight: 600;
+    font-size: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .pbi-option:hover {
+    border-color: var(--accent, #2563eb);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+    color: #1e40af;
+  }
+  .pbi-option.active {
+    border-color: var(--accent, #2563eb);
+    background: rgba(37, 99, 235, 0.06);
+    color: #1d4ed8;
+  }
+  .pbi-frame-wrap {
+    position: relative;
+    background: #f8fafc;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    min-height: 600px;
+  }
+  .pbi-frame-wrap iframe {
+    display: block;
+    width: 100%;
+    height: 75vh;
+    min-height: 600px;
+    border: none;
+  }
+  .pbi-placeholder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+    color: #64748b;
+    font-size: 1rem;
+    pointer-events: none;
+  }
+  .pbi-frame-wrap .pbi-placeholder[style*="display: none"] { display: none !important; }
+</style>
+{% endblock %}
+{% block content %}
+  <div class="pbi-page-header">
+    <h1>Dashboard PBI</h1>
+    <p class="subtitle">Relatórios Power BI embutidos — escolha um abaixo para visualizar.</p>
+  </div>
+
+  <div class="pbi-options" role="tablist" aria-label="Relatórios Power BI">
+    {% for report in reports %}
+    <a href="#" class="pbi-option" data-pbi-url="{{ report.url }}" data-pbi-id="{{ report.id }}" role="tab" aria-selected="false">
+      {{ report.nome }}
+    </a>
+    {% endfor %}
+  </div>
+
+  <div class="pbi-frame-wrap">
+    <iframe id="pbi-iframe" title="Power BI" src="about:blank" allow="fullscreen"></iframe>
+    <p class="pbi-placeholder" id="pbi-placeholder">Clique em um relatório acima para carregar.</p>
+  </div>
+
+  <script>
+  (function(){
+    var iframe = document.getElementById('pbi-iframe');
+    var placeholder = document.getElementById('pbi-placeholder');
+    var options = document.querySelectorAll('.pbi-option');
+    if (!iframe) return;
+
+    // Carrega o iframe só quando o usuário escolher um relatório (não trava a página ao abrir)
+    if (options.length) {
+      options.forEach(function(opt){
+        opt.addEventListener('click', function(e){
+          e.preventDefault();
+          var url = opt.getAttribute('data-pbi-url');
+          if (url) {
+            if (placeholder) placeholder.style.display = 'none';
+            iframe.src = url;
+            options.forEach(function(o){ o.classList.remove('active'); o.setAttribute('aria-selected', 'false'); });
+            opt.classList.add('active');
+            opt.setAttribute('aria-selected', 'true');
+          }
+        });
+      });
+    }
+
+    // Ao clicar em Dashboard/Relatório na sidebar, esvazia o iframe antes de navegar para não travar
+    var navLinks = document.querySelectorAll('.app-sidebar .nav a[href]');
+    navLinks.forEach(function(a){
+      if (a.getAttribute('target') === '_blank') return;
+      a.addEventListener('click', function(){
+        if (iframe) iframe.src = 'about:blank';
+      });
+    });
+  })();
+  </script>
+{% endblock %}

@@ -1,0 +1,24 @@
+# Deploy do ProjetoRelatorios (Django)
+# Uso: docker compose up -d
+# Acesso: http://76.13.232.59:2026 (ou http://localhost:2026)
+# Opcional: crie .env com DJANGO_SECRET_KEY (Compose usa para ${VAR})
+
+services:
+  web:
+    build: .
+    container_name: relatorios-web
+    ports:
+      - "0.0.0.0:2026:8000"
+    environment:
+      - DEBUG=0
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-altere-isso-em-producao}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0,76.13.232.59}
+      - DATABASE_PATH=/app/db/db.sqlite3
+    volumes:
+      - db_data:/app/db
+      - static_data:/app/staticfiles
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  static_data:
