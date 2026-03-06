@@ -1,0 +1,12 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+db.sqlite3
+.env
+*.log
+staticfiles/
+
+# Dados (CSVs podem ser grandes; não versionar)
+dados/*.csv

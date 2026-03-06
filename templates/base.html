@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Relatórios de Vendas{% endblock %}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; background: #f5f5f5; }
+    .navbar { background: #2c3e50; color: #fff; padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 1.5rem; }
+    .navbar a { color: #ecf0f1; text-decoration: none; }
+    .navbar a:hover { text-decoration: underline; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+    .cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    @media (max-width: 900px) { .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 500px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .card { background: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-width: 0; }
+    .card h3 { margin: 0 0 0.25rem; font-size: 0.85rem; color: #7f8c8d; }
+    .card .valor { font-size: 1rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; display: block; }
+    .filtros { background: #fff; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; }
+    .filtros label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.9rem; }
+    .filtros input, .filtros select { padding: 0.4rem 0.6rem; border: 1px solid #ddd; border-radius: 4px; }
+    .btn { padding: 0.5rem 1rem; border-radius: 4px; border: none; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.9rem; }
+    .btn-primary { background: #3498db; color: #fff; }
+    .btn-success { background: #27ae60; color: #fff; }
+    .btn-secondary { background: #95a5a6; color: #fff; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    th, td { padding: 0.6rem 0.8rem; text-align: left; border-bottom: 1px solid #eee; }
+    th { background: #34495e; color: #fff; font-weight: 600; }
+    .pagination { margin-top: 1rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .pagination a, .pagination span { padding: 0.4rem 0.8rem; background: #ecf0f1; border-radius: 4px; text-decoration: none; color: #2c3e50; }
+    .pagination .current { background: #3498db; color: #fff; }
+    .grafico { background: #fff; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; min-height: 280px; }
+    .alert { padding: 1rem; border-radius: 8px; margin: 1rem 0; }
+    .alert-warning { background: #fef3cd; border: 1px solid #ffc107; }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  {% if user.is_authenticated %}
+  <nav class="navbar">
+    <a href="{% url 'dashboard' %}">Dashboard</a>
+    <a href="{% url 'relatorio_detalhado' %}">Relatório detalhado</a>
+    <span style="margin-left: auto;">{{ user.get_username }}</span>
+    <a href="{% url 'logout' %}">Sair</a>
+  </nav>
+  {% endif %}
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

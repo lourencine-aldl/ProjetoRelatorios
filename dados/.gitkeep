@@ -1,0 +1,3 @@
+# Pasta para arquivos de dados (CSV, etc.).
+# Coloque aqui o relatorio_fat.csv e importe com:
+#   python manage.py import_vendas_csv dados/relatorio_fat.csv --format relatorio_fat --truncate

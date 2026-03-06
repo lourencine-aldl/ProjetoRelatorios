@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="alert alert-warning">
+  Você não tem permissão para acessar relatórios de vendas. Entre em contato com o administrador.
+</div>
+<p><a href="{% url 'dashboard' %}" class="btn btn-secondary">Voltar</a></p>
+{% endblock %}
