@@ -16,7 +16,7 @@ MESES_PT = {
 
 
 def parse_decimal_br(value):
-    """Converte string pt-BR (ex: '3,144166' ou '98,32') para Decimal."""
+    """Converte string para Decimal. Aceita pt-BR (3,14), ISO (2159.28) e formato 192.530.518 (ponto como milhar, último grupo 3 dígitos = decimal)."""
     if value is None or (isinstance(value, str) and value.strip() == ''):
         return None
     if isinstance(value, (int, float)):
@@ -24,7 +24,25 @@ def parse_decimal_br(value):
             return Decimal(str(value))
         except (InvalidOperation, ValueError):
             return None
-    s = str(value).strip().replace('.', '').replace(',', '.')
+    s = str(value).strip()
+    # Formato 192.530.518 (só pontos): milhares + último grupo de 3 dígitos = decimal → 192.530,518 = 192530.518
+    if ',' not in s and '.' in s:
+        parts = s.split('.')
+        if len(parts) >= 2 and len(parts[-1]) == 3 and parts[-1].isdigit():
+            try:
+                inteiro = int(''.join(parts[:-1]))  # "192" + "530" = 192530
+                decimal = int(parts[-1]) / 1000   # 518 → 0.518
+                return Decimal(str(inteiro + decimal))
+            except (ValueError, InvalidOperation):
+                pass
+    # Formato ISO (ponto decimal, ex: 2159.28): usar direto
+    if ',' not in s:
+        try:
+            return Decimal(s)
+        except (InvalidOperation, ValueError):
+            pass
+    # Formato pt-BR: vírgula decimal, ponto milhares
+    s = s.replace('.', '').replace(',', '.')
     try:
         return Decimal(s)
     except (InvalidOperation, ValueError):

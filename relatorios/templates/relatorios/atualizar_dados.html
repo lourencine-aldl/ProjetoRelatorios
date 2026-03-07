@@ -1,0 +1,18 @@
+{% extends "base_app.html" %}
+{% block title %}Atualizar base de dados{% endblock %}
+{% block content %}
+<div style="max-width: 480px;">
+  <h1 style="margin: 0 0 1rem;">Atualizar base de dados</h1>
+  <p style="color: #64748b; margin-bottom: 1rem;">
+    Será usado o arquivo: <strong>{{ csv_path }}</strong><br>
+    Os dados atuais serão <strong>substituídos</strong> pelos do CSV. A operação pode levar alguns minutos.
+  </p>
+  <form method="post" action="{% url 'atualizar_dados' %}" onsubmit="this.querySelector('button[type=submit]').disabled=true; this.querySelector('button[type=submit]').textContent='Atualizando…';">
+    {% csrf_token %}
+    <div style="display: flex; gap: 0.75rem;">
+      <button type="submit" class="btn btn-primary">Atualizar agora</button>
+      <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

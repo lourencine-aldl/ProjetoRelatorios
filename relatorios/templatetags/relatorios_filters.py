@@ -87,6 +87,17 @@ def br_decimal_short(value, decimals=2):
     return _format_decimal(value, dec)
 
 
+def _format_int_sep(value):
+    """Formata inteiro com separador de milhares (pt-BR: ponto). Ex: 4470000 -> 4.470.000."""
+    if value is None:
+        return '0'
+    try:
+        n = int(Decimal(str(value)))
+        return f'{n:,}'.replace(',', '.')
+    except (ValueError, TypeError):
+        return '0'
+
+
 @register.filter
 def br_int(value):
     """1234 (inteiro, sem decimais)."""
@@ -96,6 +107,31 @@ def br_int(value):
         return str(int(Decimal(str(value))))
     except (ValueError, TypeError):
         return '0'
+
+
+@register.filter
+def br_int_sep(value):
+    """Inteiro com separador de milhares (pt-BR), sem casa decimal. Ex: 4.470.000."""
+    return _format_int_sep(value)
+
+
+@register.filter
+def br_decimal_sep(value, decimals=2):
+    """Número com separador de milhares e casas decimais (pt-BR). Ex: 14.610.000,50."""
+    if value is None:
+        return _format_decimal(0, int(decimals) if decimals else 2)
+    return _format_decimal(value, int(decimals) if decimals else 2)
+
+
+@register.filter
+def is_negative(value):
+    """Retorna True se o valor for negativo (para estilizar em vermelho)."""
+    if value is None:
+        return False
+    try:
+        return Decimal(str(value)) < 0
+    except (ValueError, TypeError):
+        return False
 
 
 @register.filter

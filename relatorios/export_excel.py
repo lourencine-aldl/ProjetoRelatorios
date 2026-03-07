@@ -50,10 +50,14 @@ def _safe_cell_value(instance, attr, as_decimal=False, divisor=1):
         return None if as_decimal else ''
 
 
-def export_vendas_excel(queryset, max_rows=100000):
+def export_vendas_excel(queryset, max_rows=60000):
     """
     Exporta o queryset de StgVendas para um arquivo xlsx em memória.
+    Permitido apenas até 60 mil linhas de dados (além do cabeçalho).
+    A view deve bloquear exportação quando o resultado exceder max_rows.
     """
+    rows_list = list(queryset[:max_rows])
+
     wb = Workbook()
     ws = wb.active
     ws.title = 'Vendas'
@@ -68,7 +72,7 @@ def export_vendas_excel(queryset, max_rows=100000):
         cell.font = Font(bold=True)
         cell.alignment = Alignment(horizontal='center')
 
-    for row_idx, v in enumerate(queryset[:max_rows], 2):
+    for row_idx, v in enumerate(rows_list, 2):
         try:
             ws.cell(row=row_idx, column=1, value=_safe_cell_value(v, 'numnota'))
             ws.cell(row=row_idx, column=2, value=_safe_cell_value(v, 'data_faturamento'))
@@ -85,7 +89,6 @@ def export_vendas_excel(queryset, max_rows=100000):
             ws.cell(row=row_idx, column=13, value=_safe_cell_value(v, 'categoria'))
             ws.cell(row=row_idx, column=14, value=_safe_cell_value(v, 'subcategoria'))
         except Exception:
-            # Se uma linha falhar (ex.: valor inválido no banco), preenche vazio e segue
             for col in range(1, len(headers) + 1):
                 ws.cell(row=row_idx, column=col, value=None)
 

@@ -5,7 +5,7 @@ Queries de agregação para dashboard e relatório, aplicando UserScope e permis
 from datetime import time as dt_time
 from decimal import Decimal
 from django.db.models import Sum, Count, Q, F
-from django.db.models.functions import TruncDate, TruncMonth
+from django.db.models.functions import TruncDate, Coalesce
 from django.utils import timezone
 
 from .models import StgVendas, UserScope
@@ -77,7 +77,7 @@ def get_queryset_vendas(user, data_inicio=None, data_fim=None, codfilial=None, s
             Q(codfilial__icontains=termo)
         )
 
-    # Escopo do usuário (não-admin)
+    # Escopo do usuário (não-admin): só restringe quando existe UserScope configurado
     if user.is_authenticated and not user.is_superuser:
         try:
             scope = user.scope
@@ -87,20 +87,18 @@ def get_queryset_vendas(user, data_inicio=None, data_fim=None, codfilial=None, s
             if scope.filiais_permitidas:
                 qs = qs.filter(codfilial__in=scope.filiais_permitidas)
             elif not user.has_perm(perm_todas):
-                # Sem permissão "todas filiais" e sem filiais listadas = não mostra nada (ou ajuste sua regra)
                 qs = qs.none()
             if scope.supervisores_permitidos:
                 qs = qs.filter(supervisor__in=scope.supervisores_permitidos)
-        elif not user.has_perm(perm_todas):
-            qs = qs.none()
+        # Sem UserScope: usuário vê todos os dados (já passou na permissão pode_ver_relatorio_vendas)
 
     return qs
 
 
 def get_cards_kpis(qs):
-    """Retorna dict com totais para cards: total_vendido, qtd_itens, peso_total, devolucao, bonificacao, ticket_medio."""
+    """Retorna dict com totais para cards: total_vendido (VALOR_LIQUIDO), qtd_itens, peso_total, devolucao, bonificacao, ticket_medio."""
     agg = qs.aggregate(
-        total=Sum('valortotal'),
+        total=Sum(Coalesce(F('valor_liquido'), F('valortotal'))),
         qtd=Sum('qtd'),
         peso=Sum('peso'),
         devolucao=Sum('vldevolucao'),
@@ -122,15 +120,60 @@ def get_cards_kpis(qs):
 
 
 def get_serie_temporal(qs, agrupamento='dia'):
-    """Série temporal: por dia ou por mês. Retorna lista de {periodo, valor}."""
+    """Série temporal: por dia ou por mês. Retorna lista de {periodo, valor}. Compatível com SQLite."""
     if agrupamento == 'mes':
-        qs = qs.annotate(periodo=TruncMonth('data_faturamento'))
-    else:
-        qs = qs.annotate(periodo=TruncDate('data_faturamento'))
+        # Agrupamento por mês: usar __year e __month (funciona em SQLite; TruncMonth pode falhar)
+        rows = (
+            qs.values('data_faturamento__year', 'data_faturamento__month')
+            .annotate(valor=Sum('valortotal'))
+            .order_by('data_faturamento__year', 'data_faturamento__month')
+        )
+        return [
+            {
+                'periodo': '{:04d}-{:02d}-01'.format(
+                    row['data_faturamento__year'] or 0,
+                    row['data_faturamento__month'] or 1,
+                ),
+                'valor': float(row['valor']) if row['valor'] else 0,
+            }
+            for row in rows
+            if row.get('data_faturamento__year') and row.get('data_faturamento__month')
+        ]
+    # Por dia: TruncDate pode falhar em alguns SQLite; fallback com year/month/day
+    try:
+        qs_anno = qs.annotate(periodo=TruncDate('data_faturamento'))
+        rows = list(
+            qs_anno.values('periodo')
+            .annotate(valor=Sum('valortotal'))
+            .order_by('periodo')
+            .values_list('periodo', 'valor')
+        )
+        result = [
+            {'periodo': str(p), 'valor': float(v) if v else 0}
+            for p, v in rows
+            if p is not None
+        ]
+        if result:
+            return result
+    except Exception:
+        pass
+    # Fallback: agrupar por ano/mês/dia (compatível com SQLite)
+    rows = (
+        qs.values('data_faturamento__year', 'data_faturamento__month', 'data_faturamento__day')
+        .annotate(valor=Sum('valortotal'))
+        .order_by('data_faturamento__year', 'data_faturamento__month', 'data_faturamento__day')
+    )
     return [
-        {'periodo': str(p), 'valor': float(v) if v else 0}
-        for p, v in qs.values('periodo').annotate(valor=Sum('valortotal')).order_by('periodo').values_list('periodo', 'valor')
-        if p is not None
+        {
+            'periodo': '{:04d}-{:02d}-{:02d}'.format(
+                row.get('data_faturamento__year') or 0,
+                row.get('data_faturamento__month') or 1,
+                row.get('data_faturamento__day') or 1,
+            ),
+            'valor': float(row['valor']) if row.get('valor') else 0,
+        }
+        for row in rows
+        if row.get('data_faturamento__year') and row.get('data_faturamento__month') and row.get('data_faturamento__day')
     ]
 
 

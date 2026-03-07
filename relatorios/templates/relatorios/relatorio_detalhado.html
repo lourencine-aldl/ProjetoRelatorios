@@ -1,195 +1,183 @@
-{% extends "base.html" %}
+{% extends "base_app.html" %}
 {% load relatorios_filters %}
-{% block title %}Relatório detalhado - Relatórios{% endblock %}
-{% block content %}
+{% block title %}Vendas - Relatório{% endblock %}
+{% block extra_css %}
 <style>
-  .det-wrap { display: flex; gap: 0; align-items: stretch; margin-bottom: 1rem; margin-left: calc(-1 * (100vw - 100%) / 2 - 1rem); margin-top: -1rem; min-height: calc(100vh - 2.5rem); }
-  .det-sidebar-wrapper { display: flex; flex-shrink: 0; align-items: stretch; min-height: 100%; }
-  .det-sidebar { width: 72px; min-width: 72px; min-height: 100%; background: #2c3e50; border-radius: 0 4px 4px 0; box-shadow: 4px 0 20px rgba(0,0,0,0.15); transition: width 0.3s ease, min-width 0.3s ease; overflow: hidden; display: flex; flex-direction: column; }
-  .det-wrap.sidebar-aberto .det-sidebar { width: 280px; min-width: 280px; }
-  .det-sidebar .sidebar-collapsed { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1rem 0.5rem; cursor: pointer; flex: 1; min-height: 100%; width: 100%; box-sizing: border-box; position: relative; z-index: 1; }
-  .det-wrap.sidebar-aberto .det-sidebar .sidebar-collapsed { display: none; }
-  .det-sidebar .sidebar-collapsed .sidebar-hamburger { display: flex; align-items: center; justify-content: center; width: 100%; flex-shrink: 0; pointer-events: none; font-size: 1.75rem; line-height: 1; color: #fff; }
-  .det-sidebar .sidebar-collapsed:hover { background: rgba(255,255,255,0.05); }
-  .det-sidebar .sidebar-expanded { display: none; padding: 1rem 1rem 1rem 1.4rem; overflow-x: visible; overflow-y: auto; flex: 1; min-height: 0; }
-  .det-wrap.sidebar-aberto .det-sidebar .sidebar-expanded { display: block; }
-  .det-sidebar .filtros-header { margin: 0 0 1.25rem; display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: #fff; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-  .det-sidebar .filtros-header .filtros-icon { width: 18px; height: 18px; flex-shrink: 0; color: #2c3e50; opacity: 0.9; }
-  .det-sidebar .filtros-header .filtros-titulo { flex: 1; font-size: 0.9rem; font-weight: 600; color: #2c3e50; letter-spacing: 0.01em; }
-  .det-sidebar .btn-fechar { background: transparent; border: none; color: #7f8c8d; cursor: pointer; padding: 0.2rem 0.35rem; font-size: 1.1rem; line-height: 1; border-radius: 4px; transition: color 0.2s, background 0.2s; }
-  .det-sidebar .btn-fechar:hover { color: #2c3e50; background: rgba(0,0,0,0.06); }
-  .det-sidebar .filtro-item { margin-bottom: 1rem; }
-  .det-sidebar .filtro-item label { display: block; font-size: 0.8rem; color: #bdc3c7; margin-bottom: 0.35rem; font-weight: 500; letter-spacing: 0.01em; padding-left: 0.2rem; }
-  .det-sidebar .filtro-item input, .det-sidebar .filtro-item select { width: 100%; max-width: 100%; padding: 0.5rem 0.65rem; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; box-sizing: border-box; background: rgba(255,255,255,0.08); color: #ecf0f1; font-size: 0.9rem; }
-  .det-sidebar .filtro-item input::placeholder { color: #95a5a6; }
-  .det-sidebar .filtro-item select option { background: #34495e; color: #ecf0f1; }
-  .det-sidebar .btn { width: 100%; margin-top: 0.5rem; padding: 0.55rem 1rem; border-radius: 8px; font-weight: 500; transition: opacity 0.2s; }
-  .det-sidebar .btn-primary { background: #22c55e; color: #fff; border: none; }
-  .det-sidebar .btn-primary:hover { opacity: 0.92; }
-  .det-sidebar .btn-secondary { background: rgba(255,255,255,0.1); color: #ecf0f1; }
-  .det-sidebar .btn-secondary:hover { background: rgba(255,255,255,0.15); }
-  .det-sidebar .filtro-dropdown .dropdown-pesquisa { margin-bottom: 0.3rem; padding: 0.45rem 0.6rem; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; background: rgba(255,255,255,0.08); color: #ecf0f1; width: 100%; box-sizing: border-box; }
-  .det-main { flex: 1; min-width: 0; margin-left: 0; padding-left: 1rem; padding-right: 1rem; padding-top: 1rem; max-width: 1200px; }
-  .det-filtros-linha { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; }
-  .det-filtros-linha .filtro-item { margin-bottom: 0; }
-  .det-filtros-linha .filtro-item label { display: block; font-size: 0.85rem; color: #555; margin-bottom: 0.25rem; }
-  .det-filtros-linha .filtro-item input, .det-filtros-linha .filtro-item select { padding: 0.5rem 0.6rem; border: 1px solid #ddd; border-radius: 4px; min-height: 2.25rem; }
-  .det-filtros-linha .filtro-dropdown { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.9rem; min-width: 0; max-width: 220px; }
-  .det-filtros-linha .filtro-dropdown > span { font-weight: 500; }
+  .page-header {
+    background: var(--header-bg, #f8fafc);
+    padding: 1.25rem 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .page-header .title-block h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #0f172a; }
+  .page-header .title-block .subtitle { margin: 0.25rem 0 0; font-size: 0.9rem; color: #64748b; }
+  .table-wrap { overflow-x: auto; margin-bottom: 1rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .table-wrap table { min-width: 960px; margin: 0; }
+  .table-wrap th, .table-wrap td { white-space: nowrap; }
+  .table-wrap th.num, .table-wrap td.num { text-align: right; white-space: nowrap; }
+  .table-wrap td.td-cliente, .table-wrap td.td-produto { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sidebar-filters-content .filtro-dropdown .dropdown-pesquisa { margin-bottom: 0.3rem; padding: 0.45rem 0.6rem; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; background: rgba(255,255,255,0.08); color: #fff; width: 100%; box-sizing: border-box; }
 </style>
-<form method="get" id="form-filtros-det">
-  <div class="det-wrap" id="det-wrap">
-    <div class="det-sidebar-wrapper">
-      <aside class="det-sidebar" id="det-sidebar">
-        <div class="sidebar-collapsed" id="det-sidebar-collapsed" role="button" tabindex="0" title="Abrir filtros" aria-label="Expandir filtros">
-          <div class="sidebar-hamburger" aria-hidden="true">&#9776;</div>
-        </div>
-        <div class="sidebar-expanded" id="det-sidebar-expanded">
-        <div class="filtros-header">
-          <svg class="filtros-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-          <span class="filtros-titulo">Filtros</span>
-          <button type="button" class="btn-fechar" id="det-sidebar-fechar" title="Recolher" aria-label="Recolher">‹</button>
-        </div>
-        {% if filiais %}
-        <div class="filtro-item">
-          <label>Filial</label>
-          <select name="codfilial" id="select-codfilial-side"><option value="">Todas</option>{% for f in filiais %}<option value="{{ f }}" {% if request.GET.codfilial == f %}selected{% endif %}>{{ f }}</option>{% endfor %}</select>
-        </div>
-        {% endif %}
-        <div class="filtro-item">
-          <label>Pesquisar</label>
-          <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Nota, cliente, produto...">
-        </div>
-        {% if clientes %}
-        <div class="filtro-item filtro-dropdown">
-          <label>Cliente</label>
-          <input type="text" class="dropdown-pesquisa" placeholder="Filtrar..." data-target="select-cliente-side" autocomplete="off">
-          <select name="cliente" id="select-cliente-side"><option value="">Todos</option>{% for c in clientes %}<option value="{{ c }}" {% if request.GET.cliente == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
-        </div>
-        {% endif %}
-        {% if fornecedores_opcoes %}
-        <div class="filtro-item filtro-dropdown">
-          <label>Fornecedor</label>
-          <input type="text" class="dropdown-pesquisa" placeholder="Filtrar..." data-target="select-fornecedor-side" autocomplete="off">
-          <select name="fornecedor" id="select-fornecedor-side"><option value="">Todos</option>{% for f in fornecedores_opcoes %}<option value="{{ f }}" {% if request.GET.fornecedor == f %}selected{% endif %}>{{ f }}</option>{% endfor %}</select>
-        </div>
-        {% endif %}
-        {% if produtos %}
-        <div class="filtro-item filtro-dropdown">
-          <label>Produto</label>
-          <input type="text" class="dropdown-pesquisa" placeholder="Filtrar..." data-target="select-produto-side" autocomplete="off">
-          <select name="produto" id="select-produto-side"><option value="">Todos</option>{% for p in produtos %}<option value="{{ p }}" {% if request.GET.produto == p %}selected{% endif %}>{{ p }}</option>{% endfor %}</select>
-        </div>
-        {% endif %}
-        <button type="submit" class="btn btn-primary">Filtrar</button>
-        <a href="{% url 'relatorio_detalhado' %}" class="btn btn-secondary" style="margin-top:0.35rem;">Limpar filtros</a>
-        </div>
-      </aside>
+{% endblock %}
+{% block sidebar_filters %}
+  <div class="sidebar-filter-actions">
+    <button type="submit" class="btn-filtrar">Filtrar</button>
+    <a href="{% url 'relatorio_detalhado' %}?nocache=1" class="btn-limpar">Limpar filtros</a>
+  </div>
+  <div class="field">
+    <label>Data início</label>
+    <input type="date" name="data_inicio" value="{{ data_inicio|date:'Y-m-d' }}">
+  </div>
+  <div class="field">
+    <label>Data fim</label>
+    <input type="date" name="data_fim" value="{{ data_fim|date:'Y-m-d' }}">
+  </div>
+  <div class="field">
+    <label>Pesquisar</label>
+    <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Nota, cliente, produto...">
+  </div>
+  {% if filiais %}
+  <div class="field">
+    <label>Filial</label>
+    <select name="codfilial">
+      <option value="">Todas</option>
+      {% for f in filiais %}<option value="{{ f }}" {% if request.GET.codfilial == f %}selected{% endif %}>{{ f }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  {% if supervisores %}
+  <div class="field">
+    <label>Supervisor</label>
+    <select name="supervisor">
+      <option value="">Todos</option>
+      {% for s in supervisores %}<option value="{{ s }}" {% if request.GET.supervisor == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  {% if vendedores %}
+  <div class="field">
+    <label>Vendedor</label>
+    <select name="vendedor">
+      <option value="">Todos</option>
+      {% for v in vendedores %}<option value="{{ v }}" {% if request.GET.vendedor == v %}selected{% endif %}>{{ v }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  {% if clientes %}
+  <div class="field filtro-dropdown">
+    <label>Cliente</label>
+    <input type="text" class="dropdown-pesquisa" placeholder="Filtrar..." data-target="select-cliente" autocomplete="off">
+    <select name="cliente" id="select-cliente">
+      <option value="">Todos</option>
+      {% for c in clientes %}<option value="{{ c }}" {% if request.GET.cliente == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  {% if fornecedores_opcoes %}
+  <div class="field filtro-dropdown">
+    <label>Fornecedor / Seção</label>
+    <input type="text" class="dropdown-pesquisa" placeholder="Filtrar..." data-target="select-fornecedor" autocomplete="off">
+    <select name="fornecedor" id="select-fornecedor">
+      <option value="">Todos</option>
+      {% for f in fornecedores_opcoes %}<option value="{{ f }}" {% if request.GET.fornecedor == f %}selected{% endif %}>{{ f }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  {% if produtos %}
+  <div class="field filtro-dropdown">
+    <label>Produto</label>
+    <input type="text" class="dropdown-pesquisa" placeholder="Filtrar..." data-target="select-produto" autocomplete="off">
+    <select name="produto" id="select-produto">
+      <option value="">Todos</option>
+      {% for p in produtos %}<option value="{{ p }}" {% if request.GET.produto == p %}selected{% endif %}>{{ p }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+{% endblock %}
+{% block content %}
+  <div class="page-header">
+    <div class="title-block">
+      <h1>Vendas</h1>
+      <p class="subtitle">Gerir vendas e transações</p>
     </div>
-    <div class="det-main">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem;">
-        <h1 style="margin:0;">Relatório detalhado</h1>
-        <div style="display:flex; gap:0.5rem;">
-          <a href="{% url 'dashboard' %}" class="btn btn-secondary">Voltar ao dashboard</a>
-          {% if pode_exportar %}
-          <a href="{% url 'export_excel' %}{% if export_excel_query %}?{{ export_excel_query }}{% endif %}" class="btn btn-success">Exportar Excel</a>
-          {% endif %}
-        </div>
-      </div>
-
-      <div class="det-filtros-linha">
-        <div class="filtro-item">
-          <label>Data início</label>
-          <input type="date" name="data_inicio" value="{{ data_inicio|date:'Y-m-d' }}">
-        </div>
-        <div class="filtro-item">
-          <label>Data fim</label>
-          <input type="date" name="data_fim" value="{{ data_fim|date:'Y-m-d' }}">
-        </div>
-        {% if supervisores %}
-        <div class="filtro-dropdown">
-          <span>Supervisor</span>
-          <select name="supervisor" id="select-supervisor"><option value="">Todos</option>{% for s in supervisores %}<option value="{{ s }}" {% if request.GET.supervisor == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
-        </div>
-        {% endif %}
-        {% if vendedores %}
-        <div class="filtro-dropdown">
-          <span>Vendedor</span>
-          <select name="vendedor" id="select-vendedor"><option value="">Todos</option>{% for v in vendedores %}<option value="{{ v }}" {% if request.GET.vendedor == v %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
-        </div>
-        {% endif %}
-        <button type="submit" class="btn btn-primary" style="align-self:flex-end;">Filtrar</button>
-        <a href="{% url 'relatorio_detalhado' %}" class="btn btn-secondary" style="align-self:flex-end;">Limpar filtros</a>
-      </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Nota</th>
-            <th>Data</th>
-            <th>Filial</th>
-            <th>Supervisor</th>
-            <th>Cliente</th>
-            <th>Produto</th>
-            <th>Qtd</th>
-            <th>Valor total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for v in vendas %}
-          <tr>
-            <td>{{ v.numnota }}</td>
-            <td>{{ v.data_faturamento|date:"d/m/Y H:i" }}</td>
-            <td>{{ v.codfilial }}</td>
-            <td>{{ v.supervisor }}</td>
-            <td>{{ v.cliente }}</td>
-            <td>{{ v.produto }}</td>
-            <td>{{ v.qtd|br_int }}</td>
-            <td>{{ v.valortotal|br_currency }}</td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="8">Nenhum registro encontrado.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-
-      <div class="pagination">
-        {% if page_obj.has_previous %}
-        <a href="?{{ export_excel_query }}{% if export_excel_query %}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
-        {% endif %}
-        <span class="current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
-        {% if page_obj.has_next %}
-        <a href="?{{ export_excel_query }}{% if export_excel_query %}&{% endif %}page={{ page_obj.next_page_number }}">Próxima</a>
-        {% endif %}
-      </div>
+    <div class="header-actions">
+      {% if pode_exportar %}
+      <a href="{% url 'export_excel' %}{% if export_excel_query %}?{{ export_excel_query }}{% endif %}" class="btn btn-success">
+        <span>↓</span> Exportar Excel
+      </a>
+      {% endif %}
     </div>
   </div>
-</form>
-<script>
-(function(){
-  var wrap = document.getElementById('det-wrap');
-  var collapsedEl = document.getElementById('det-sidebar-collapsed');
-  var btnClose = document.getElementById('det-sidebar-fechar');
-  if (wrap && collapsedEl) {
-    collapsedEl.addEventListener('click', function(){ wrap.classList.add('sidebar-aberto'); });
-    collapsedEl.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); wrap.classList.add('sidebar-aberto'); } });
-  }
-  if (wrap && btnClose) btnClose.addEventListener('click', function(){ wrap.classList.remove('sidebar-aberto'); });
-  var form = document.getElementById('form-filtros-det');
-  if (form) {
-    form.querySelectorAll('.dropdown-pesquisa').forEach(function(inp){
-      var targetId = inp.getAttribute('data-target');
-      if (!targetId) return;
-      var sel = form.querySelector('#' + targetId);
-      if (!sel) return;
-      inp.addEventListener('input', function(){
-        var v = (this.value || '').toLowerCase();
-        [].slice.call(sel.options).forEach(function(opt){
-          opt.style.display = (!v || (opt.text || '').toLowerCase().indexOf(v) >= 0) ? '' : 'none';
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Data e hora</th>
+          <th scope="col">Nota</th>
+          <th scope="col">Cliente</th>
+          <th scope="col">Filial</th>
+          <th scope="col">Vendedor</th>
+          <th scope="col">Supervisor</th>
+          <th scope="col">Produto</th>
+          <th scope="col" class="num">Qtd</th>
+          <th scope="col" class="num">Valor total</th>
+          <th scope="col" class="num">Devolução</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in vendas %}
+        <tr>
+          <td>{{ v.data_faturamento|date:"d/m/Y H:i" }}</td>
+          <td>{{ v.numnota }}</td>
+          <td class="td-cliente" title="{{ v.cliente|default:'' }}">{{ v.cliente|default:"—" }}</td>
+          <td>{{ v.codfilial }}</td>
+          <td>{{ v.nomerca|default:"—" }}</td>
+          <td>{{ v.supervisor|default:"—" }}</td>
+          <td class="td-produto" title="{{ v.produto|default:'' }}">{{ v.produto|default:"—" }}</td>
+          <td class="num">{{ v.qtd|br_int }}</td>
+          <td class="num {% if v.valortotal|is_negative %}num-negativo{% endif %}">{{ v.valortotal|br_currency }}</td>
+          <td class="num {% if v.vldevolucao|is_negative %}num-negativo{% endif %}">{{ v.vldevolucao|br_currency }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="10">Nenhum registro encontrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination">
+    {% if page_obj.has_previous %}
+    <a href="?{% if export_excel_query %}{{ export_excel_query }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+    {% endif %}
+    <span class="current">Página {{ page_obj.number }}{% if page_obj.paginator.has_real_count %} de {{ page_obj.paginator.num_pages }}{% endif %}</span>
+    {% if page_obj.has_next %}
+    <a href="?{% if export_excel_query %}{{ export_excel_query }}&{% endif %}page={{ page_obj.next_page_number }}">Próxima</a>
+    {% endif %}
+  </div>
+
+  <script>
+  (function(){
+    var form = document.getElementById('form-filtros');
+    if (form) {
+      form.querySelectorAll('.dropdown-pesquisa').forEach(function(inp){
+        var targetId = inp.getAttribute('data-target');
+        if (!targetId) return;
+        var sel = form.querySelector('#' + targetId);
+        if (!sel) return;
+        inp.addEventListener('input', function(){
+          var v = (this.value || '').toLowerCase();
+          [].slice.call(sel.options).forEach(function(opt){
+            opt.style.display = (!v || (opt.text || '').toLowerCase().indexOf(v) >= 0) ? '' : 'none';
+          });
         });
       });
-    });
-  }
-})();
-</script>
+    }
+  })();
+  </script>
 {% endblock %}

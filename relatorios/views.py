@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import json
 from datetime import timedelta
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
@@ -9,8 +8,43 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView
 from django.http import HttpResponse
 from django.utils import timezone
+from django.core.cache import cache
+from django.core.management import call_command
+from django.core.paginator import Paginator, Page
+from django.conf import settings
+from django.contrib import messages
+from io import StringIO
 
 from .models import StgVendas
+
+
+class PaginatorSemCount(Paginator):
+    """Paginator que não executa COUNT(*); usa apenas LIMIT/OFFSET para a página atual."""
+    has_real_count = False  # template pode mostrar só "Página N" sem total
+
+    def __init__(self, object_list, per_page, **kwargs):
+        super().__init__(object_list, per_page, **kwargs)
+        self._last_page_num = None
+        self._last_has_next = False
+        self._last_len = 0
+
+    @property
+    def count(self):
+        if self._last_page_num is None:
+            return 0
+        if self._last_has_next:
+            return self._last_page_num * self.per_page + 1
+        return (self._last_page_num - 1) * self.per_page + self._last_len
+
+    def page(self, number):
+        number = self.validate_number(number)
+        start = (number - 1) * self.per_page
+        # Busca só esta página + 1 para saber se há próxima (evita COUNT)
+        chunk = list(self.object_list[start : start + self.per_page + 1])
+        self._last_len = len(chunk)
+        self._last_has_next = self._last_len > self.per_page
+        self._last_page_num = number
+        return Page(chunk[: self.per_page], number, self)
 from .services import (
     get_queryset_vendas,
     get_cards_kpis,
@@ -46,11 +80,89 @@ def logout_view(request):
     return redirect('login')
 
 
+@login_required
+def atualizar_dados_view(request):
+    """Executa import_vendas_csv (truncate + arquivo configurado). Apenas staff."""
+    if not request.user.is_staff:
+        messages.error(request, 'Sem permissão para atualizar a base de dados.')
+        return redirect('dashboard')
+    csv_path = getattr(settings, 'IMPORT_VENDAS_CSV_PATH', None)
+    if not csv_path:
+        messages.error(request, 'Caminho do CSV não configurado (IMPORT_VENDAS_CSV_PATH).')
+        return redirect('dashboard')
+    from pathlib import Path
+    path = Path(csv_path)
+    if not path.is_absolute():
+        path = Path(settings.BASE_DIR) / path
+    if not path.exists():
+        messages.error(request, f'Arquivo não encontrado: {path}')
+        return redirect('dashboard')
+    if request.method != 'POST':
+        return render(request, 'relatorios/atualizar_dados.html', {'csv_path': path})
+    out = StringIO()
+    err = StringIO()
+    try:
+        call_command(
+            'import_vendas_csv',
+            str(path),
+            '--sep', ',',
+            '--truncate',
+            stdout=out,
+            stderr=err,
+        )
+        cache.clear()  # evita dashboard/relatório virem vazios por causa de cache antigo
+        log = (out.getvalue() or '').strip() + (err.getvalue() or '').strip()
+        messages.success(request, f'Base de dados atualizada. {log}')
+    except Exception as e:
+        messages.error(request, f'Erro ao importar: {e}')
+    return redirect('dashboard')
+
+
 def root_redirect(request):
     """Redireciona / para login ou dashboard."""
     if request.user.is_authenticated:
         return redirect('dashboard')
     return redirect('login')
+
+
+def teste_web_view(request):
+    """Página de teste (sem login) para verificar se a aplicação está no ar."""
+    from django.utils import timezone
+    agora = timezone.now().strftime('%d/%m/%Y %H:%M:%S')
+    html = f'''<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><title>Teste - App Relatórios</title></head>
+<body style="font-family:sans-serif;max-width:600px;margin:3rem auto;padding:1rem;">
+  <h1>✓ Aplicação funcionando</h1>
+  <p>Servidor respondeu com sucesso.</p>
+  <p><strong>Data/hora do servidor:</strong> {agora}</p>
+  <p><a href="/login/">Ir para login</a></p>
+</body>
+</html>'''
+    return HttpResponse(html, content_type='text/html; charset=utf-8')
+
+
+@login_required
+def dashboard_pbi(request):
+    """Página com opções para abrir relatórios Power BI embutidos."""
+    reports = [
+        {
+            'id': 'diretoria',
+            'nome': 'Diretoria',
+            'url': 'https://app.powerbi.com/view?r=eyJrIjoiZThlOWEyOTUtZGNiZi00ZDc2LThkODItMDIwOTQ0ODA0MDhlIiwidCI6IjM5YmY5MWE0LWFjYmYtNDY1Ni1iNzkwLTRmNjQ1N2M2MTkzYyJ9',
+        },
+        {
+            'id': 'gestao-vendas',
+            'nome': 'Gestão de Vendas',
+            'url': 'https://app.powerbi.com/view?r=eyJrIjoiZmFlMzMyOGUtZTUxYy00MGIxLTk3OTItMmQyZDgxZjUxMDRiIiwidCI6IjM5YmY5MWE0LWFjYmYtNDY1Ni1iNzkwLTRmNjQ1N2M2MTkzYyJ9',
+        },
+        {
+            'id': 'gestao-precos',
+            'nome': 'Gestão de Preços',
+            'url': 'https://app.powerbi.com/view?r=eyJrIjoiNjcyODE5MzgtYjliNy00ZGQ5LTg1ZDktNWFkYTc2MTEwMDg0IiwidCI6IjM5YmY5MWE0LWFjYmYtNDY1Ni1iNzkwLTRmNjQ1N2M2MTkzYyJ9',
+        },
+    ]
+    return render(request, 'relatorios/dashboard_pbi.html', {'reports': reports})
 
 
 @login_required
@@ -60,9 +172,10 @@ def dashboard(request):
         return render(request, 'relatorios/sem_permissao.html')
 
     hoje = timezone.now().date()
-    # Padrão: mês atual (primeiro dia do mês até hoje)
     from datetime import date
+    # Padrão: mês atual; o usuário pode alterar pelo filtro na sidebar. Limpar filtros = mês atual.
     inicio_mes = date(hoje.year, hoje.month, 1)
+    usuario_escolheu_data = 'data_inicio' in request.GET or 'data_fim' in request.GET
     data_fim = request.GET.get('data_fim') or hoje
     data_inicio = request.GET.get('data_inicio') or inicio_mes
     if isinstance(data_inicio, str):
@@ -70,13 +183,20 @@ def dashboard(request):
             from datetime import datetime
             data_inicio = datetime.strptime(data_inicio, '%Y-%m-%d').date()
         except ValueError:
-            data_inicio = date(hoje.year, hoje.month, 1)
+            data_inicio = inicio_mes
     if isinstance(data_fim, str):
         try:
             from datetime import datetime
             data_fim = datetime.strptime(data_fim, '%Y-%m-%d').date()
         except ValueError:
             data_fim = hoje
+    # Padrão: sempre mês atual (dia 1 até hoje). Limpar filtros = mês atual.
+    qs_escopo = get_queryset_vendas(request.user, data_inicio=data_inicio, data_fim=data_fim)
+    try:
+        filter_fornecedor_as_secao = not qs_escopo.filter(fornecedor__isnull=False).exclude(fornecedor='').exists()
+    except Exception:
+        filter_fornecedor_as_secao = True
+
     codfilial = request.GET.get('codfilial', '').strip() or None
     supervisor = request.GET.get('supervisor', '').strip() or None
     secao = request.GET.get('secao', '').strip() or None
@@ -87,12 +207,38 @@ def dashboard(request):
     produto = request.GET.get('produto', '').strip() or None
     q = request.GET.get('q', '').strip() or None
 
-    # Verificar se há dados de fornecedor no período (senão usamos seção no filtro e no gráfico)
-    qs_escopo = get_queryset_vendas(request.user, data_inicio=data_inicio, data_fim=data_fim)
-    try:
-        filter_fornecedor_as_secao = not qs_escopo.filter(fornecedor__isnull=False).exclude(fornecedor='').exists()
-    except Exception:
-        filter_fornecedor_as_secao = True
+    # Cache: mesma combinação de datas + filtros = resposta em cache (2 min). ?nocache=1 ignora cache.
+    cache_key = 'relatorios:dashboard:%s:%s:%s:%s' % (
+        request.user.pk,
+        data_inicio,
+        data_fim,
+        tuple(sorted((k, v) for k, v in request.GET.items() if v and k != 'nocache')),
+    )
+    cached = None if request.GET.get('nocache') else cache.get(cache_key)
+    if cached is not None:
+        # Se cache tem cards com vendas mas gráficos vazios, ignorar e recalcular
+        try:
+            tv = (cached.get('cards') or {}).get('total_vendido')
+            total = float(tv) if tv is not None else 0.0
+        except (TypeError, ValueError):
+            total = 0.0
+        has_chart_data = len(cached.get('serie_temporal') or []) > 0 and len(cached.get('top_clientes') or []) > 0
+        if total > 0 and not has_chart_data:
+            cached = None
+    if cached is not None:
+        agrupamento = request.GET.get('agrupamento', 'dia')
+        context = {
+            **cached,
+            'data_inicio': data_inicio,
+            'data_fim': data_fim,
+            'agrupamento': agrupamento,
+            'pode_exportar': request.user.has_perm('relatorios.pode_exportar_excel'),
+        }
+        # Garantir que gráficos sempre recebam listas (evitar None vindo do cache antigo)
+        for key in ('serie_temporal', 'top_clientes', 'top_fornecedores', 'top_produtos', 'vendas_por_supervisor', 'top_vendedores'):
+            if context.get(key) is None:
+                context[key] = []
+        return render(request, 'relatorios/dashboard.html', context)
 
     qs = get_queryset_vendas(
         request.user,
@@ -113,6 +259,12 @@ def dashboard(request):
     cards = get_cards_kpis(qs)
     agrupamento = request.GET.get('agrupamento', 'dia')
     serie = get_serie_temporal(qs, agrupamento)
+    # Se a série está vazia mas há vendas (ex.: data_faturamento nula), mostrar pelo menos o total
+    if not serie and qs.exists():
+        from django.db.models import Sum, F
+        from django.db.models.functions import Coalesce
+        total = qs.aggregate(s=Sum(Coalesce(F('valor_liquido'), F('valortotal'))))['s'] or 0
+        serie = [{'periodo': str(data_inicio), 'valor': float(total), 'label': 'Total (sem data)'}]
     # Labels no eixo X: por mês = MM/AA, por dia = 01/jan/26
     meses_abrev = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
     for item in serie:
@@ -148,45 +300,74 @@ def dashboard(request):
     por_filial = get_vendas_por_filial(qs)
     mix = get_mix_secao_categoria(qs, 10)
 
-    # Opções para filtros (dropdowns) a partir do mesmo escopo, só por data
-    qs_filtros = get_queryset_vendas(
-        request.user,
-        data_inicio=data_inicio,
-        data_fim=data_fim,
-        filter_fornecedor_as_secao=filter_fornecedor_as_secao,
-    )
-    filiais = list(qs_filtros.values_list('codfilial', flat=True).distinct().order_by('codfilial'))
-    supervisores = list(qs_filtros.values_list('supervisor', flat=True).distinct().order_by('supervisor')[:100])
-    clientes = list(qs_filtros.values_list('cliente', flat=True).distinct().exclude(cliente='').order_by('cliente')[:200])
-    vendedores = list(qs_filtros.values_list('nomerca', flat=True).distinct().exclude(nomerca='').order_by('nomerca')[:200])
-    if filter_fornecedor_as_secao:
-        fornecedores_opcoes = list(qs_filtros.values_list('secao', flat=True).distinct().exclude(secao='').order_by('secao')[:200])
+    # Opções dos filtros: tentar cache por (user, período, fornecedor/seção) para evitar 6 consultas
+    filtros_cache_key = 'relatorios:filtros:%s:%s:%s:%s' % (request.user.pk, data_inicio, data_fim, filter_fornecedor_as_secao)
+    filtros_cached = cache.get(filtros_cache_key)
+    if filtros_cached is not None:
+        filiais, supervisores, clientes, vendedores, fornecedores_opcoes, produtos = filtros_cached
     else:
-        try:
-            fornecedores_opcoes = list(qs_filtros.values_list('fornecedor', flat=True).distinct().exclude(fornecedor='').order_by('fornecedor')[:200])
-        except Exception:
-            fornecedores_opcoes = []
-    produtos = list(qs_filtros.values_list('produto', flat=True).distinct().exclude(produto='').order_by('produto')[:200])
+        filiais = list(qs_escopo.values_list('codfilial', flat=True).distinct().order_by('codfilial'))
+        supervisores = list(qs_escopo.values_list('supervisor', flat=True).distinct().order_by('supervisor')[:100])
+        clientes = list(qs_escopo.values_list('cliente', flat=True).distinct().exclude(cliente='').order_by('cliente')[:200])
+        vendedores = list(qs_escopo.values_list('nomerca', flat=True).distinct().exclude(nomerca='').order_by('nomerca')[:200])
+        if filter_fornecedor_as_secao:
+            fornecedores_opcoes = list(qs_escopo.values_list('secao', flat=True).distinct().exclude(secao='').order_by('secao')[:200])
+        else:
+            try:
+                fornecedores_opcoes = list(qs_escopo.values_list('fornecedor', flat=True).distinct().exclude(fornecedor='').order_by('fornecedor')[:200])
+            except Exception:
+                fornecedores_opcoes = []
+        produtos = list(qs_escopo.values_list('produto', flat=True).distinct().exclude(produto='').order_by('produto')[:200])
+        cache.set(filtros_cache_key, (filiais, supervisores, clientes, vendedores, fornecedores_opcoes, produtos), timeout=180)
 
-    # Serializar para JSON nos templates (gráficos)
-    def to_json(obj):
+    # Dados para gráficos: listas serializáveis (template usa json_script para evitar quebra no HTML)
+    def as_float(v):
         try:
-            return json.dumps(obj, default=str)
-        except Exception:
-            return '[]'
+            return float(v) if v is not None else 0.0
+        except (TypeError, ValueError):
+            return 0.0
+
+    chart_serie_temporal = [{'periodo': str(item.get('periodo', '')), 'valor': as_float(item.get('valor')), 'label': str(item.get('label', ''))} for item in serie]
+    chart_top_produtos = [{'produto': str(p.get('produto', '')), 'valor': as_float(p.get('valor'))} for p in top_produtos]
+    chart_top_clientes = [{'cliente': str(c.get('cliente') or '(vazio)'), 'valor': as_float(c.get('valor'))} for c in top_clientes]
+    chart_top_fornecedores = [{'fornecedor': str(f.get('fornecedor') or '(vazio)'), 'valor': as_float(f.get('valor'))} for f in top_fornecedores]
+    chart_supervisor = [{'supervisor': str(s.get('supervisor') or '(vazio)'), 'valor': as_float(s.get('valor'))} for s in por_supervisor]
+    chart_vendedores = [{'vendedor': str(v.get('nomerca') or '(vazio)'), 'valor': as_float(v.get('valor'))} for v in top_vendedores]
+
+    # Garantir listas (nunca None) para o template/json_script
+    def as_list(val):
+        return list(val) if val is not None else []
+
+    # Se período sem dados, buscar intervalo real na base para orientar o usuário
+    periodo_disponivel = None
+    try:
+        total = float(cards.get('total_vendido') or 0)
+    except (TypeError, ValueError):
+        total = 0.0
+    if total == 0:
+        from django.db.models import Min, Max
+        qs_base = get_queryset_vendas(request.user, data_inicio=None, data_fim=None)
+        agg = qs_base.aggregate(Min('data_faturamento'), Max('data_faturamento'))
+        min_dt, max_dt = agg.get('data_faturamento__min'), agg.get('data_faturamento__max')
+        if min_dt and max_dt:
+            periodo_disponivel = (
+                min_dt.date() if hasattr(min_dt, 'date') else min_dt,
+                max_dt.date() if hasattr(max_dt, 'date') else max_dt,
+            )
 
     context = {
         'cards': cards,
-        'serie_temporal': to_json(serie),
-        'top_produtos': to_json([{'produto': p['produto'], 'valor': float(p['valor'] or 0)} for p in top_produtos]),
-        'top_clientes': to_json([{'cliente': c['cliente'] or '(vazio)', 'valor': float(c['valor'] or 0)} for c in top_clientes]),
-        'top_fornecedores': to_json([{'fornecedor': f['fornecedor'] or '(vazio)', 'valor': float(f['valor'] or 0)} for f in top_fornecedores]),
-        'vendas_por_supervisor': to_json([{'supervisor': s['supervisor'] or '(vazio)', 'valor': float(s['valor'] or 0)} for s in por_supervisor]),
-        'top_vendedores': to_json([{'vendedor': v['nomerca'] or '(vazio)', 'valor': float(v['valor'] or 0)} for v in top_vendedores]),
-        'vendas_por_filial': to_json([{'codfilial': f['codfilial'], 'valor': float(f['valor'] or 0)} for f in por_filial]),
+        'serie_temporal': as_list(chart_serie_temporal),
+        'top_produtos': as_list(chart_top_produtos),
+        'top_clientes': as_list(chart_top_clientes),
+        'top_fornecedores': as_list(chart_top_fornecedores),
+        'vendas_por_supervisor': as_list(chart_supervisor),
+        'top_vendedores': as_list(chart_vendedores),
+        'vendas_por_filial': [{'codfilial': f['codfilial'], 'valor': as_float(f.get('valor'))} for f in por_filial],
         'mix_secao_categoria': mix,
         'data_inicio': data_inicio,
         'data_fim': data_fim,
+        'agrupamento': agrupamento,
         'filiais': filiais,
         'supervisores': supervisores,
         'clientes': clientes,
@@ -194,8 +375,12 @@ def dashboard(request):
         'fornecedores_opcoes': fornecedores_opcoes,
         'produtos': produtos,
         'fornecedores_label': fornecedores_label,
-        'pode_exportar': request.user.has_perm('relatorios.pode_exportar_excel'),
+        'periodo_disponivel': periodo_disponivel,
     }
+    context['pode_exportar'] = request.user.has_perm('relatorios.pode_exportar_excel')
+    # Não cachear resultado vazio: assim, quando houver dados no mês, a próxima carga mostra
+    if total > 0:
+        cache.set(cache_key, context, timeout=120)
     return render(request, 'relatorios/dashboard.html', context)
 
 
@@ -204,6 +389,9 @@ class RelatorioDetalhadoView(LoginRequiredMixin, ListView):
     paginate_by = 50
     context_object_name = 'vendas'
 
+    def get_paginator(self, queryset, per_page, orphans=0, allow_empty_first_page=True):
+        return PaginatorSemCount(queryset, per_page)
+
     def get_queryset(self):
         from datetime import datetime
         from django.utils import timezone
@@ -211,7 +399,9 @@ class RelatorioDetalhadoView(LoginRequiredMixin, ListView):
         if not (self.request.user.is_superuser or self.request.user.has_perm(perm)):
             return StgVendas.objects.none()
         hoje = timezone.now().date()
+        from datetime import timedelta
         inicio_mes = hoje.replace(day=1)
+        usuario_escolheu_data = 'data_inicio' in self.request.GET or 'data_fim' in self.request.GET
         di = self.request.GET.get('data_inicio') or None
         df = self.request.GET.get('data_fim') or None
         if di and isinstance(di, str):
@@ -228,6 +418,17 @@ class RelatorioDetalhadoView(LoginRequiredMixin, ListView):
                 df = hoje
         else:
             df = df or hoje
+        # Padrão: sempre mês atual. Limpar filtros = mês atual.
+        qs_escopo = get_queryset_vendas(self.request.user, data_inicio=di, data_fim=df)
+        try:
+            filter_fornecedor_as_secao = not qs_escopo.filter(fornecedor__isnull=False).exclude(fornecedor='').exists()
+        except Exception:
+            filter_fornecedor_as_secao = True
+        # Guardar para get_context_data (evita nova get_queryset_vendas)
+        self._relatorio_qs_filtros = qs_escopo
+        self._relatorio_di, self._relatorio_df = di, df
+        self._relatorio_filter_fornecedor_as_secao = filter_fornecedor_as_secao
+
         codfilial = (self.request.GET.get('codfilial') or '').strip() or None
         supervisor = (self.request.GET.get('supervisor') or '').strip() or None
         cliente = (self.request.GET.get('cliente') or '').strip() or None
@@ -235,11 +436,6 @@ class RelatorioDetalhadoView(LoginRequiredMixin, ListView):
         fornecedor = (self.request.GET.get('fornecedor') or '').strip() or None
         produto = (self.request.GET.get('produto') or '').strip() or None
         q = (self.request.GET.get('q') or '').strip() or None
-        qs_escopo = get_queryset_vendas(self.request.user, data_inicio=di, data_fim=df)
-        try:
-            filter_fornecedor_as_secao = not qs_escopo.filter(fornecedor__isnull=False).exclude(fornecedor='').exists()
-        except Exception:
-            filter_fornecedor_as_secao = True
         qs = get_queryset_vendas(
             self.request.user,
             data_inicio=di,
@@ -253,49 +449,62 @@ class RelatorioDetalhadoView(LoginRequiredMixin, ListView):
             filter_fornecedor_as_secao=filter_fornecedor_as_secao,
             q=q,
         )
-        return qs.order_by('-data_faturamento')
+        cols = ('id', 'data_faturamento', 'numnota', 'cliente', 'codfilial', 'nomerca', 'supervisor', 'produto', 'qtd', 'valortotal', 'vldevolucao')
+        return qs.only(*cols).order_by('-data_faturamento')
 
     def get_context_data(self, **kwargs):
-        from .services import get_queryset_vendas
-        from datetime import datetime, timedelta
-        from django.utils import timezone
         from urllib.parse import urlencode
         ctx = super().get_context_data(**kwargs)
         ctx['pode_exportar'] = self.request.user.has_perm('relatorios.pode_exportar_excel')
-        hoje = timezone.now().date()
-        # Padrão: mês atual (primeiro dia até hoje)
-        inicio_mes = hoje.replace(day=1)
-        di = self.request.GET.get('data_inicio') or inicio_mes
-        df = self.request.GET.get('data_fim') or hoje
-        if isinstance(di, str):
+        qs = getattr(self, '_relatorio_qs_filtros', None)
+        di = getattr(self, '_relatorio_di', None)
+        df = getattr(self, '_relatorio_df', None)
+        filter_fornecedor_as_secao = getattr(self, '_relatorio_filter_fornecedor_as_secao', True)
+        if qs is None:
+            from .services import get_queryset_vendas
+            from datetime import datetime, timedelta
+            from django.utils import timezone
+            hoje = timezone.now().date()
+            inicio_mes = hoje.replace(day=1)
+            usuario_escolheu_data = 'data_inicio' in self.request.GET or 'data_fim' in self.request.GET
+            di = self.request.GET.get('data_inicio') or inicio_mes
+            df = self.request.GET.get('data_fim') or hoje
+            if isinstance(di, str):
+                try:
+                    di = datetime.strptime(di, '%Y-%m-%d').date()
+                except ValueError:
+                    di = inicio_mes
+            if isinstance(df, str):
+                try:
+                    df = datetime.strptime(df, '%Y-%m-%d').date()
+                except ValueError:
+                    df = hoje
+            qs = get_queryset_vendas(self.request.user, data_inicio=di, data_fim=df)
             try:
-                di = datetime.strptime(di, '%Y-%m-%d').date()
-            except ValueError:
-                di = inicio_mes
-        if isinstance(df, str):
-            try:
-                df = datetime.strptime(df, '%Y-%m-%d').date()
-            except ValueError:
-                df = hoje
+                filter_fornecedor_as_secao = not qs.filter(fornecedor__isnull=False).exclude(fornecedor='').exists()
+            except Exception:
+                filter_fornecedor_as_secao = True
         ctx['data_inicio'] = di
         ctx['data_fim'] = df
-        qs = get_queryset_vendas(self.request.user, data_inicio=di, data_fim=df)
-        try:
-            filter_fornecedor_as_secao = not qs.filter(fornecedor__isnull=False).exclude(fornecedor='').exists()
-        except Exception:
-            filter_fornecedor_as_secao = True
-        ctx['filiais'] = list(qs.values_list('codfilial', flat=True).distinct().order_by('codfilial'))
-        ctx['supervisores'] = list(qs.values_list('supervisor', flat=True).distinct().order_by('supervisor')[:100])
-        ctx['vendedores'] = list(qs.values_list('nomerca', flat=True).distinct().exclude(nomerca='').order_by('nomerca')[:200])
-        ctx['clientes'] = list(qs.values_list('cliente', flat=True).distinct().exclude(cliente='').order_by('cliente')[:200])
-        if filter_fornecedor_as_secao:
-            ctx['fornecedores_opcoes'] = list(qs.values_list('secao', flat=True).distinct().exclude(secao='').order_by('secao')[:200])
+        # Cache das opções de filtro (evita 6 consultas DISTINCT por request). ?nocache=1 ignora cache.
+        filtros_key = 'relatorios:relatorio_filtros:%s:%s:%s:%s' % (self.request.user.pk, di, df, filter_fornecedor_as_secao)
+        filtros_cached = None if self.request.GET.get('nocache') else cache.get(filtros_key)
+        if filtros_cached is not None:
+            ctx['filiais'], ctx['supervisores'], ctx['vendedores'], ctx['clientes'], ctx['fornecedores_opcoes'], ctx['produtos'] = filtros_cached
         else:
-            try:
-                ctx['fornecedores_opcoes'] = list(qs.values_list('fornecedor', flat=True).distinct().exclude(fornecedor='').order_by('fornecedor')[:200])
-            except Exception:
-                ctx['fornecedores_opcoes'] = []
-        ctx['produtos'] = list(qs.values_list('produto', flat=True).distinct().exclude(produto='').order_by('produto')[:200])
+            ctx['filiais'] = list(qs.values_list('codfilial', flat=True).distinct().order_by('codfilial'))
+            ctx['supervisores'] = list(qs.values_list('supervisor', flat=True).distinct().order_by('supervisor')[:100])
+            ctx['vendedores'] = list(qs.values_list('nomerca', flat=True).distinct().exclude(nomerca='').order_by('nomerca')[:200])
+            ctx['clientes'] = list(qs.values_list('cliente', flat=True).distinct().exclude(cliente='').order_by('cliente')[:200])
+            if filter_fornecedor_as_secao:
+                ctx['fornecedores_opcoes'] = list(qs.values_list('secao', flat=True).distinct().exclude(secao='').order_by('secao')[:200])
+            else:
+                try:
+                    ctx['fornecedores_opcoes'] = list(qs.values_list('fornecedor', flat=True).distinct().exclude(fornecedor='').order_by('fornecedor')[:200])
+                except Exception:
+                    ctx['fornecedores_opcoes'] = []
+            ctx['produtos'] = list(qs.values_list('produto', flat=True).distinct().exclude(produto='').order_by('produto')[:200])
+            cache.set(filtros_key, (ctx['filiais'], ctx['supervisores'], ctx['vendedores'], ctx['clientes'], ctx['fornecedores_opcoes'], ctx['produtos']), timeout=180)
         params = {k: v for k, v in self.request.GET.items() if k != 'page'}
         ctx['export_excel_query'] = urlencode(params)
         return ctx
@@ -327,6 +536,7 @@ def export_excel_view(request):
             data_fim = hoje
     else:
         data_fim = data_fim or hoje
+    # Padrão: sempre mês atual (dia 1 até hoje)
     codfilial = (request.GET.get('codfilial') or '').strip() or None
     supervisor = (request.GET.get('supervisor') or '').strip() or None
     cliente = (request.GET.get('cliente') or '').strip() or None
@@ -352,11 +562,18 @@ def export_excel_view(request):
         filter_fornecedor_as_secao=filter_fornecedor_as_secao,
         q=q,
     )
+    LIMITE_EXPORT_EXCEL = 60000
+    if list(qs[LIMITE_EXPORT_EXCEL : LIMITE_EXPORT_EXCEL + 1]):
+        messages.error(
+            request,
+            'Não é possível exportar mais de 60.000 linhas. O relatório selecionado excede esse limite. Ajuste os filtros (data, filial, etc.) para reduzir a quantidade de registros.',
+        )
+        from urllib.parse import urlencode
+        return redirect('relatorio_detalhado' + ('?' + urlencode(request.GET) if request.GET else ''))
     try:
-        buffer = export_vendas_excel(qs)
+        buffer = export_vendas_excel(qs[:LIMITE_EXPORT_EXCEL])
         data = buffer.getvalue()
     except Exception as e:
-        from django.http import HttpResponse
         return HttpResponse(
             f'Erro ao gerar Excel: {e}. Verifique os dados ou permissões.',
             status=500,
