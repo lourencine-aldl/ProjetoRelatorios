@@ -11,6 +11,8 @@
   .chart-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
   .chart-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
   .chart-canvas-wrap { display: block; }
+  .grafico { cursor: default; }
+  .grafico .chart-click-hint { font-size: 0.8rem; color: #64748b; margin-top: 0.25rem; }
 </style>
 {% endblock %}
 {% block sidebar_filters %}
@@ -108,14 +110,16 @@
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; min-width: 0;">
       <div class="grafico" style="min-width: 0;">
         <h3>Vendas por {% if agrupamento == 'mes' %}mês{% else %}dia{% endif %}</h3>
+        <p class="chart-click-hint">Clique em um ponto para filtrar por esse período.</p>
         <div style="height:280px; min-width:300px; position:relative;">
-          <canvas id="chartVendasDia" width="400" height="280" style="max-width:100%;"></canvas>
+          <canvas id="chartVendasDia" width="400" height="280" style="max-width:100%; cursor:pointer;"></canvas>
         </div>
       </div>
       <div class="grafico" style="min-width: 0;">
         <h3>Top 10 clientes</h3>
+        <p class="chart-click-hint">Clique em uma barra para filtrar por esse cliente.</p>
         <div class="chart-scroll" style="height:320px; min-width:300px;">
-          <div class="chart-canvas-wrap"><canvas id="chartCliente"></canvas></div>
+          <div class="chart-canvas-wrap"><canvas id="chartCliente" style="cursor:pointer;"></canvas></div>
         </div>
       </div>
     </div>
@@ -125,14 +129,16 @@
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
       <div class="grafico">
         <h3>{{ fornecedores_label|default:"Top 10 fornecedores" }}</h3>
+        <p class="chart-click-hint">Clique em uma barra para filtrar por esse fornecedor.</p>
         <div class="chart-scroll" style="height:320px;">
-          <div class="chart-canvas-wrap"><canvas id="chartFornecedor"></canvas></div>
+          <div class="chart-canvas-wrap"><canvas id="chartFornecedor" style="cursor:pointer;"></canvas></div>
         </div>
       </div>
       <div class="grafico">
         <h3>Top 10 produtos</h3>
+        <p class="chart-click-hint">Clique em uma barra para filtrar por esse produto.</p>
         <div class="chart-scroll" style="height:320px;">
-          <div class="chart-canvas-wrap"><canvas id="chartProduto"></canvas></div>
+          <div class="chart-canvas-wrap"><canvas id="chartProduto" style="cursor:pointer;"></canvas></div>
         </div>
       </div>
     </div>
@@ -142,14 +148,16 @@
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
       <div class="grafico">
         <h3>Top 10 supervisores</h3>
+        <p class="chart-click-hint">Clique em uma barra para filtrar por esse supervisor.</p>
         <div class="chart-scroll" style="height:320px;">
-          <div class="chart-canvas-wrap"><canvas id="chartSupervisor"></canvas></div>
+          <div class="chart-canvas-wrap"><canvas id="chartSupervisor" style="cursor:pointer;"></canvas></div>
         </div>
       </div>
       <div class="grafico">
         <h3>Top 10 vendedores</h3>
+        <p class="chart-click-hint">Clique em uma barra para filtrar por esse vendedor.</p>
         <div class="chart-scroll" style="height:320px;">
-          <div class="chart-canvas-wrap"><canvas id="chartVendedor"></canvas></div>
+          <div class="chart-canvas-wrap"><canvas id="chartVendedor" style="cursor:pointer;"></canvas></div>
         </div>
       </div>
     </div>
@@ -175,6 +183,7 @@
 })();
 </script>
 {{ serie_temporal|json_script:"serie-temporal-data" }}
+<script type="application/json" id="dashboard-config">{"agrupamento": "{{ agrupamento|default:'dia' }}", "url": "{% url 'dashboard' %}"}</script>
 {{ top_clientes|json_script:"top-clientes-data" }}
 {{ top_fornecedores|json_script:"top-fornecedores-data" }}
 {{ top_produtos|json_script:"top-produtos-data" }}
@@ -189,6 +198,32 @@
     var el = document.getElementById(id);
     if (!el || !el.textContent) return [];
     try { return JSON.parse(el.textContent.trim()); } catch (e) { return []; }
+  }
+  function getConfig() {
+    var el = document.getElementById('dashboard-config');
+    if (!el || !el.textContent) return { agrupamento: 'dia', url: '' };
+    try { return JSON.parse(el.textContent.trim()); } catch (e) { return { agrupamento: 'dia', url: '' }; }
+  }
+  function getCurrentParams() {
+    var form = document.getElementById('form-filtros');
+    var params = {};
+    if (form) {
+      var els = form.querySelectorAll('input, select');
+      for (var i = 0; i < els.length; i++) {
+        var e = els[i];
+        var n = (e.name || '').trim();
+        if (!n) continue;
+        var v = (e.type === 'checkbox' || e.type === 'radio') ? (e.checked ? e.value : null) : (e.value || '');
+        if (v !== null && v !== '') params[n] = v;
+      }
+    }
+    return params;
+  }
+  function redirectWithParams(params) {
+    var cfg = getConfig();
+    var base = (cfg.url || window.location.pathname || '/dashboard/').replace(/\?.*$/, '');
+    var q = Object.keys(params).map(function(k){ return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); }).join('&');
+    window.location = q ? (base + '?' + q) : base;
   }
   function formatBr(val) {
     var n = Number(val);
@@ -214,6 +249,7 @@
       ['chartVendasDia','chartCliente','chartFornecedor','chartProduto','chartSupervisor','chartVendedor'].forEach(function(id){ placeholder(id, 'Carregando Chart.js...'); });
       return;
     }
+    var cfg = getConfig();
     var serie = parseJsonScript('serie-temporal-data');
     var serieLabels = serie.map(function(x){ return (x.label || (x.periodo || '').substring(0,10)); });
     var serieData = serie.map(function(x){ return Number(x.valor) || 0; });
@@ -229,6 +265,29 @@
             options: {
               responsive: true,
               maintainAspectRatio: false,
+              onClick: function(evt, elements, chart) {
+                if (elements.length === 0) return;
+                var idx = elements[0].index;
+                var p = (serie[idx] && serie[idx].periodo) ? String(serie[idx].periodo) : '';
+                if (!p) return;
+                var params = getCurrentParams();
+                params.data_inicio = p;
+                if ((cfg.agrupamento || 'dia') === 'mes') {
+                  var parts = p.split('-');
+                  if (parts.length >= 2) {
+                    var y = parseInt(parts[0], 10);
+                    var m = parseInt(parts[1], 10);
+                    var last = new Date(y, m, 0);
+                    params.data_fim = y + '-' + String(last.getMonth() + 1).padStart(2, '0') + '-' + String(last.getDate()).padStart(2, '0');
+                  } else {
+                    params.data_fim = p;
+                  }
+                } else {
+                  params.data_fim = p;
+                }
+                params.agrupamento = cfg.agrupamento || 'dia';
+                redirectWithParams(params);
+              },
               plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c){ return 'R$ ' + (c.raw||0).toLocaleString('pt-BR',{minimumFractionDigits:2}); } } } },
               scales: { x: { ticks: { maxRotation: 45, font: { size: 10 } } }, y: { beginAtZero: true, ticks: { callback: function(v){ return formatBr(v); }, font: { size: 10 } } } }
             }
@@ -237,7 +296,7 @@
       }
     }
     var BAR_HEIGHT_PX = 32;
-    function barChart(canvasId, arr, labelKey, valueKey, color) {
+    function barChart(canvasId, arr, labelKey, valueKey, color, urlParamName) {
       arr = Array.isArray(arr) ? arr : [];
       var labels = arr.map(function(x){ return (x[labelKey]||'').toString().substring(0,25); });
       var values = arr.map(function(x){ return Number(x[valueKey])||0; });
@@ -260,17 +319,26 @@
             maintainAspectRatio: false,
             barPercentage: 0.9,
             categoryPercentage: 1,
+            onClick: function(evt, elements, chart) {
+              if (elements.length === 0 || !urlParamName) return;
+              var idx = elements[0].index;
+              var rawValue = (arr[idx] && arr[idx][labelKey] != null) ? String(arr[idx][labelKey]) : '';
+              if (!rawValue) return;
+              var params = getCurrentParams();
+              params[urlParamName] = rawValue;
+              redirectWithParams(params);
+            },
             plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c){ return 'R$ ' + (c.raw||0).toLocaleString('pt-BR',{minimumFractionDigits:2}); } } } },
             scales: { x: { beginAtZero: true, ticks: { callback: function(v){ return formatBr(v); }, font: { size: 10 } } }, y: { ticks: { font: { size: 11 }, autoSkip: false } } }
           }
         });
       } catch (e) { placeholder(canvasId, 'Erro'); }
     }
-    barChart('chartCliente', parseJsonScript('top-clientes-data'), 'cliente', 'valor', '#27ae60');
-    barChart('chartFornecedor', parseJsonScript('top-fornecedores-data'), 'fornecedor', 'valor', '#9b59b6');
-    barChart('chartProduto', parseJsonScript('top-produtos-data'), 'produto', 'valor', '#1abc9c');
-    barChart('chartSupervisor', parseJsonScript('vendas-supervisor-data'), 'supervisor', 'valor', '#e67e22');
-    barChart('chartVendedor', parseJsonScript('top-vendedores-data'), 'vendedor', 'valor', '#e74c3c');
+    barChart('chartCliente', parseJsonScript('top-clientes-data'), 'cliente', 'valor', '#27ae60', 'cliente');
+    barChart('chartFornecedor', parseJsonScript('top-fornecedores-data'), 'fornecedor', 'valor', '#9b59b6', 'fornecedor');
+    barChart('chartProduto', parseJsonScript('top-produtos-data'), 'produto', 'valor', '#1abc9c', 'produto');
+    barChart('chartSupervisor', parseJsonScript('vendas-supervisor-data'), 'supervisor', 'valor', '#e67e22', 'supervisor');
+    barChart('chartVendedor', parseJsonScript('top-vendedores-data'), 'vendedor', 'valor', '#e74c3c', 'vendedor');
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function(){ setTimeout(drawCharts, 150); });

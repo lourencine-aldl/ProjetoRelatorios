@@ -25,6 +25,13 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     transition: border-color 0.2s, box-shadow 0.2s;
   }
+  .pbi-option-desc {
+    display: block;
+    font-weight: 400;
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-top: 0.25rem;
+  }
   .pbi-option:hover {
     border-color: var(--accent, #2563eb);
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
@@ -72,10 +79,14 @@
   <div class="pbi-options" role="tablist" aria-label="Relatórios Power BI">
     {% for report in reports %}
     <a href="#" class="pbi-option" data-pbi-url="{{ report.url }}" data-pbi-id="{{ report.id }}" role="tab" aria-selected="false">
-      {{ report.nome }}
+      <span class="pbi-option-name">{{ report.nome }}</span>
+      {% if report.descricao %}<span class="pbi-option-desc">{{ report.descricao }}</span>{% endif %}
     </a>
     {% endfor %}
   </div>
+  {% if not reports %}
+  <p class="subtitle">Nenhum relatório liberado para seu usuário. Peça ao administrador para conceder acesso em <em>Admin → Recursos PBI (links)</em>.</p>
+  {% endif %}
 
   <div class="pbi-frame-wrap">
     <iframe id="pbi-iframe" title="Power BI" src="about:blank" allow="fullscreen"></iframe>

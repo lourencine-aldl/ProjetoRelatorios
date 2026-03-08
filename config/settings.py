@@ -15,6 +15,17 @@ ALLOWED_HOSTS = [h.strip() for h in _hosts.split(',') if h.strip()]
 if DEBUG:
     ALLOWED_HOSTS = ['*']  # em desenvolvimento aceita qualquer Host
 
+# CSRF: Django 4+ exige origens confiáveis para POST (evita 403 "Verificação CSRF falhou")
+_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '').strip()
+if _origins:
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in _origins.split(',') if o.strip()]
+else:
+    # Gerar a partir de ALLOWED_HOSTS + origens comuns (porta 2026 = Docker, 8000 = interno)
+    _port = os.environ.get('CSRF_TRUSTED_ORIGINS_PORT', '2026')
+    _base = [f'http://127.0.0.1:{_port}', f'http://localhost:{_port}', 'http://127.0.0.1:8000']
+    _from_hosts = [f'http://{h.strip()}:{_port}' for h in _hosts.split(',') if h.strip() and h.strip() != '*']
+    CSRF_TRUSTED_ORIGINS = _base + _from_hosts
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -51,6 +62,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'relatorios.context_processors.pbi_menu',
             ],
         },
     },
@@ -105,6 +117,12 @@ LOGOUT_REDIRECT_URL = '/login/'
 
 # Caminho do CSV para importação de vendas (relativo a BASE_DIR ou absoluto)
 IMPORT_VENDAS_CSV_PATH = os.environ.get('IMPORT_VENDAS_CSV_PATH', str(BASE_DIR / 'dados' / 'Relatorio_Fat.csv'))
+# Formato do CSV: separador (novo formato usa ";") e format (vazio = com cabeçalho; "relatorio_fat" = antigo sem cabeçalho, vírgula)
+IMPORT_VENDAS_CSV_SEP = os.environ.get('IMPORT_VENDAS_CSV_SEP', ';')
+IMPORT_VENDAS_CSV_FORMAT = os.environ.get('IMPORT_VENDAS_CSV_FORMAT', '').strip().lower()  # '' = header + DictReader
+
+# Valores no banco estão em escala 1000x (ex.: valor 1000 = R$ 1,00). Use 1 se o CSV já estiver em reais (novo Relatorio_Fat).
+VALOR_DIVISOR = int(os.environ.get('VALOR_DIVISOR', '1'))
 
 # Permissões customizadas (códigos)
 PERMISSAO_VER_RELATORIO_VENDAS = 'relatorios.pode_ver_relatorio_vendas'

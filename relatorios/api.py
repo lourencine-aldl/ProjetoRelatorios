@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """APIs REST (DRF) para dashboard e relatório detalhado em JSON."""
+from django.conf import settings
 from django.db.models import Q
 from rest_framework import status
 from rest_framework.views import APIView
@@ -61,14 +62,15 @@ class DashboardAPIView(APIView):
         )
 
         cards = get_cards_kpis(qs)
-        # Serializar Decimal para float no JSON
+        divisor = getattr(settings, 'VALOR_DIVISOR', 1000)
+        # Serializar Decimal para float no JSON; valores monetários divididos por VALOR_DIVISOR
         cards_json = {
-            'total_vendido': float(cards['total_vendido']),
+            'total_vendido': float(cards['total_vendido']) / divisor,
             'qtd_itens': float(cards['qtd_itens']),
             'peso_total': float(cards['peso_total']),
-            'devolucao': float(cards['devolucao']),
-            'bonificacao': float(cards['bonificacao']),
-            'ticket_medio': float(cards['ticket_medio']),
+            'devolucao': float(cards['devolucao']) / divisor,
+            'bonificacao': float(cards['bonificacao']) / divisor,
+            'ticket_medio': float(cards['ticket_medio']) / divisor,
             'num_notas': cards['num_notas'],
         }
 
@@ -81,10 +83,10 @@ class DashboardAPIView(APIView):
 
         return Response({
             'cards': cards_json,
-            'serie_temporal': serie,
-            'top_produtos': [{'produto': p['produto'], 'valor': float(p['valor'] or 0), 'qtd': float(p['qtd'] or 0)} for p in top_produtos],
-            'vendas_por_filial': [{'codfilial': f['codfilial'], 'valor': float(f['valor'] or 0)} for f in por_filial],
-            'vendas_por_supervisor': [{'supervisor': s['supervisor'], 'valor': float(s['valor'] or 0)} for s in por_supervisor],
-            'mix_secao_categoria': [{'secao': m['secao'], 'categoria': m['categoria'], 'valor': float(m['valor'] or 0)} for m in mix],
+            'serie_temporal': [{'periodo': s.get('periodo'), 'valor': float(s.get('valor') or 0) / divisor} for s in serie],
+            'top_produtos': [{'produto': p['produto'], 'valor': float(p['valor'] or 0) / divisor, 'qtd': float(p['qtd'] or 0)} for p in top_produtos],
+            'vendas_por_filial': [{'codfilial': f['codfilial'], 'valor': float(f['valor'] or 0) / divisor} for f in por_filial],
+            'vendas_por_supervisor': [{'supervisor': s['supervisor'], 'valor': float(s['valor'] or 0) / divisor} for s in por_supervisor],
+            'mix_secao_categoria': [{'secao': m['secao'], 'categoria': m['categoria'], 'valor': float(m['valor'] or 0) / divisor} for m in mix],
             'filtros': {'data_inicio': str(data_inicio), 'data_fim': str(data_fim)},
         })

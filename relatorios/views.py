@@ -101,15 +101,13 @@ def atualizar_dados_view(request):
         return render(request, 'relatorios/atualizar_dados.html', {'csv_path': path})
     out = StringIO()
     err = StringIO()
+    sep = getattr(settings, 'IMPORT_VENDAS_CSV_SEP', ';')
+    fmt = getattr(settings, 'IMPORT_VENDAS_CSV_FORMAT', '')
+    cmd_args = [str(path), '--truncate', '--sep', sep]
+    if fmt:
+        cmd_args.extend(['--format', fmt])
     try:
-        call_command(
-            'import_vendas_csv',
-            str(path),
-            '--sep', ',',
-            '--truncate',
-            stdout=out,
-            stderr=err,
-        )
+        call_command('import_vendas_csv', *cmd_args, stdout=out, stderr=err)
         cache.clear()  # evita dashboard/relatório virem vazios por causa de cache antigo
         log = (out.getvalue() or '').strip() + (err.getvalue() or '').strip()
         messages.success(request, f'Base de dados atualizada. {log}')
@@ -144,23 +142,21 @@ def teste_web_view(request):
 
 @login_required
 def dashboard_pbi(request):
-    """Página com opções para abrir relatórios Power BI embutidos."""
+    """Página com opções para abrir relatórios Power BI. Acesso: permissão pode_ver_power_bi OU ter pelo menos um recurso PBI atribuído.
+    Só exibe os recursos (links) aos quais o usuário foi permitido no admin (Recursos PBI)."""
+    perm = 'relatorios.pode_ver_power_bi'
+    tem_permissao = request.user.is_superuser or request.user.has_perm(perm)
+    tem_recursos = request.user.recursos_pbi.exists()
+    if not (tem_permissao or tem_recursos):
+        return render(request, 'relatorios/sem_permissao.html')
+    from .models import RecursoPBI
+    if request.user.is_superuser:
+        qs = RecursoPBI.objects.all().order_by('ordem', 'nome')
+    else:
+        qs = RecursoPBI.objects.filter(usuarios_permitidos=request.user).distinct().order_by('ordem', 'nome')
     reports = [
-        {
-            'id': 'diretoria',
-            'nome': 'Diretoria',
-            'url': 'https://app.powerbi.com/view?r=eyJrIjoiZThlOWEyOTUtZGNiZi00ZDc2LThkODItMDIwOTQ0ODA0MDhlIiwidCI6IjM5YmY5MWE0LWFjYmYtNDY1Ni1iNzkwLTRmNjQ1N2M2MTkzYyJ9',
-        },
-        {
-            'id': 'gestao-vendas',
-            'nome': 'Gestão de Vendas',
-            'url': 'https://app.powerbi.com/view?r=eyJrIjoiZmFlMzMyOGUtZTUxYy00MGIxLTk3OTItMmQyZDgxZjUxMDRiIiwidCI6IjM5YmY5MWE0LWFjYmYtNDY1Ni1iNzkwLTRmNjQ1N2M2MTkzYyJ9',
-        },
-        {
-            'id': 'gestao-precos',
-            'nome': 'Gestão de Preços',
-            'url': 'https://app.powerbi.com/view?r=eyJrIjoiNjcyODE5MzgtYjliNy00ZGQ5LTg1ZDktNWFkYTc2MTEwMDg0IiwidCI6IjM5YmY5MWE0LWFjYmYtNDY1Ni1iNzkwLTRmNjQ1N2M2MTkzYyJ9',
-        },
+        {'id': f'r-{r.pk}', 'nome': r.nome, 'descricao': r.descricao or '', 'url': r.url}
+        for r in qs
     ]
     return render(request, 'relatorios/dashboard_pbi.html', {'reports': reports})
 
@@ -257,13 +253,25 @@ def dashboard(request):
     )
 
     cards = get_cards_kpis(qs)
+    divisor = getattr(settings, 'VALOR_DIVISOR', 1000)
+    # Cards para exibição: valores monetários divididos por VALOR_DIVISOR (banco em escala 1000x)
+    cards_display = dict(cards)
+    for key in ('total_vendido', 'ticket_medio', 'devolucao', 'bonificacao'):
+        if key in cards_display and cards_display[key] is not None:
+            try:
+                cards_display[key] = float(cards_display[key]) / divisor
+            except (TypeError, ValueError):
+                pass
     agrupamento = request.GET.get('agrupamento', 'dia')
     serie = get_serie_temporal(qs, agrupamento)
     # Se a série está vazia mas há vendas (ex.: data_faturamento nula), mostrar pelo menos o total
     if not serie and qs.exists():
         from django.db.models import Sum, F
         from django.db.models.functions import Coalesce
-        total = qs.aggregate(s=Sum(Coalesce(F('valor_liquido'), F('valortotal'))))['s'] or 0
+        from django.db.models import Value, DecimalField
+        from decimal import Decimal
+        _dec = DecimalField(max_digits=16, decimal_places=4)
+        total = qs.aggregate(s=Sum(Coalesce(F('valor_liquido'), Value(Decimal('0'), output_field=_dec), output_field=_dec)))['s'] or 0
         serie = [{'periodo': str(data_inicio), 'valor': float(total), 'label': 'Total (sem data)'}]
     # Labels no eixo X: por mês = MM/AA, por dia = 01/jan/26
     meses_abrev = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
@@ -327,12 +335,12 @@ def dashboard(request):
         except (TypeError, ValueError):
             return 0.0
 
-    chart_serie_temporal = [{'periodo': str(item.get('periodo', '')), 'valor': as_float(item.get('valor')), 'label': str(item.get('label', ''))} for item in serie]
-    chart_top_produtos = [{'produto': str(p.get('produto', '')), 'valor': as_float(p.get('valor'))} for p in top_produtos]
-    chart_top_clientes = [{'cliente': str(c.get('cliente') or '(vazio)'), 'valor': as_float(c.get('valor'))} for c in top_clientes]
-    chart_top_fornecedores = [{'fornecedor': str(f.get('fornecedor') or '(vazio)'), 'valor': as_float(f.get('valor'))} for f in top_fornecedores]
-    chart_supervisor = [{'supervisor': str(s.get('supervisor') or '(vazio)'), 'valor': as_float(s.get('valor'))} for s in por_supervisor]
-    chart_vendedores = [{'vendedor': str(v.get('nomerca') or '(vazio)'), 'valor': as_float(v.get('valor'))} for v in top_vendedores]
+    chart_serie_temporal = [{'periodo': str(item.get('periodo', '')), 'valor': as_float(item.get('valor')) / divisor, 'label': str(item.get('label', ''))} for item in serie]
+    chart_top_produtos = [{'produto': str(p.get('produto', '')), 'valor': as_float(p.get('valor')) / divisor} for p in top_produtos]
+    chart_top_clientes = [{'cliente': str(c.get('cliente') or '(vazio)'), 'valor': as_float(c.get('valor')) / divisor} for c in top_clientes]
+    chart_top_fornecedores = [{'fornecedor': str(f.get('fornecedor') or '(vazio)'), 'valor': as_float(f.get('valor')) / divisor} for f in top_fornecedores]
+    chart_supervisor = [{'supervisor': str(s.get('supervisor') or '(vazio)'), 'valor': as_float(s.get('valor')) / divisor} for s in por_supervisor]
+    chart_vendedores = [{'vendedor': str(v.get('nomerca') or '(vazio)'), 'valor': as_float(v.get('valor')) / divisor} for v in top_vendedores]
 
     # Garantir listas (nunca None) para o template/json_script
     def as_list(val):
@@ -341,7 +349,7 @@ def dashboard(request):
     # Se período sem dados, buscar intervalo real na base para orientar o usuário
     periodo_disponivel = None
     try:
-        total = float(cards.get('total_vendido') or 0)
+        total = float(cards.get('total_vendido') or 0) / divisor
     except (TypeError, ValueError):
         total = 0.0
     if total == 0:
@@ -356,14 +364,14 @@ def dashboard(request):
             )
 
     context = {
-        'cards': cards,
+        'cards': cards_display,
         'serie_temporal': as_list(chart_serie_temporal),
         'top_produtos': as_list(chart_top_produtos),
         'top_clientes': as_list(chart_top_clientes),
         'top_fornecedores': as_list(chart_top_fornecedores),
         'vendas_por_supervisor': as_list(chart_supervisor),
         'top_vendedores': as_list(chart_vendedores),
-        'vendas_por_filial': [{'codfilial': f['codfilial'], 'valor': as_float(f.get('valor'))} for f in por_filial],
+        'vendas_por_filial': [{'codfilial': f['codfilial'], 'valor': as_float(f.get('valor')) / divisor} for f in por_filial],
         'mix_secao_categoria': mix,
         'data_inicio': data_inicio,
         'data_fim': data_fim,

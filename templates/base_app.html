@@ -177,9 +177,11 @@
         <a href="{% url 'relatorio_detalhado' %}" class="{% if request.resolver_match.url_name == 'relatorio_detalhado' %}active{% endif %}">
           <span class="icon">📋</span><span class="label">Relatório</span>
         </a>
+        {% if show_pbi_menu %}
         <a href="{% url 'dashboard_pbi' %}" class="{% if request.resolver_match.url_name == 'dashboard_pbi' %}active{% endif %}">
           <span class="icon">📈</span><span class="label">Dashboard PBI</span>
         </a>
+        {% endif %}
         <a href="{% url 'admin:index' %}" target="_blank">
           <span class="icon">⚙</span><span class="label">Admin</span>
         </a>
