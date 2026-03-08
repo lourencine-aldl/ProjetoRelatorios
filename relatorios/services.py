@@ -4,7 +4,7 @@ Queries de agregação para dashboard e relatório, aplicando UserScope e permis
 """
 from datetime import time as dt_time
 from decimal import Decimal
-from django.db.models import Sum, Count, Q, F
+from django.db.models import Sum, Count, Q, F, Value, DecimalField
 from django.db.models.functions import TruncDate, Coalesce
 from django.utils import timezone
 
@@ -96,9 +96,10 @@ def get_queryset_vendas(user, data_inicio=None, data_fim=None, codfilial=None, s
 
 
 def get_cards_kpis(qs):
-    """Retorna dict com totais para cards: total_vendido (VALOR_LIQUIDO), qtd_itens, peso_total, devolucao, bonificacao, ticket_medio."""
+    """Retorna dict com totais para cards: total_vendido = soma de Valor_Liquido, qtd_itens, peso_total, devolucao, bonificacao, ticket_medio."""
+    _dec = DecimalField(max_digits=16, decimal_places=4)
     agg = qs.aggregate(
-        total=Sum(Coalesce(F('valor_liquido'), F('valortotal'))),
+        total=Sum(Coalesce(F('valor_liquido'), Value(Decimal('0'), output_field=_dec), output_field=_dec)),
         qtd=Sum('qtd'),
         peso=Sum('peso'),
         devolucao=Sum('vldevolucao'),

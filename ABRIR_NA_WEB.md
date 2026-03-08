@@ -1,48 +1,39 @@
-# Abrir o projeto na web (pelo Cursor)
+# Abrir o projeto na web
 
-## Opção 1: Atalho — abrir a janela do navegador (recomendado)
+## Com Docker (porta 2026)
 
-Pressione **Ctrl+Shift+B** (ou Cmd+Shift+B no Mac).
+O projeto sobe na **porta 2026**. Use uma das URLs abaixo.
 
-A janela do Simple Browser abre dentro do Cursor com o projeto (http://127.0.0.1:8000/).
+**Se você está no mesmo computador do servidor:**
+- http://127.0.0.1:2026/
+- http://localhost:2026/
 
----
+**Se você está em outro computador** (acessando um servidor remoto):
+- http://IP_DO_SERVIDOR:2026/  
+  (substitua `IP_DO_SERVIDOR` pelo IP ou domínio do servidor, ex.: `http://76.13.232.59:2026/`)
 
-## Opção 2: Paleta de Comandos (Simple Browser)
-
-1. Pressione **Ctrl+Shift+P** (ou Cmd+Shift+P no Mac) para abrir a Paleta de Comandos.
-2. Digite: **Simple Browser: Show**
-3. Selecione o comando e pressione Enter.
-4. Cole esta URL e pressione Enter:
-   ```
-   http://127.0.0.1:8000/
-   ```
-
-O Cursor abre a página dentro do editor.
+**Login:** admin / admin  
+- [Login](http://127.0.0.1:2026/login/)
+- [Admin Django](http://127.0.0.1:2026/admin/)
+- [Dashboard](http://127.0.0.1:2026/dashboard/)
 
 ---
 
-## Opção 3: Clicar no link
+## Abrir pelo Cursor
 
-Com o servidor rodando, **Ctrl+clique** (ou Cmd+clique no Mac) no link abaixo para abrir no navegador padrão:
-
-**http://127.0.0.1:8000/**
-
-Outras páginas:
-- [Login](http://127.0.0.1:8000/login/) — usuário: teste, senha: 123456
-- [Dashboard](http://127.0.0.1:8000/dashboard/)
-- [Admin](http://127.0.0.1:8000/admin/)
+1. Pressione **Ctrl+Shift+B** (ou Cmd+Shift+B no Mac) para abrir o Simple Browser.
+2. Ou **Ctrl+Shift+P** → "Simple Browser: Show" → cole a URL.
+3. Use **http://127.0.0.1:2026/** (se o Cursor está no mesmo servidor) ou **http://IP:2026/** (acesso remoto).
 
 ---
 
 ## Servidor não está rodando?
 
-No terminal, dentro da pasta do projeto:
-
 ```bash
-cd /home/Projetos/Projeto-Django
-source .venv/bin/activate
-python manage.py runserver
+cd /home/Projetos/ProjetoRelatorios
+docker compose up -d
 ```
 
-Depois use uma das opções acima.
+Se a porta 2026 não abrir no navegador, verifique:
+- **Firewall:** liberar a porta 2026 (ex.: `ufw allow 2026`).
+- **URL correta:** com Docker use sempre a porta **2026**, não 8000.
