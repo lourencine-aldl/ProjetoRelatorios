@@ -30,6 +30,32 @@ class UserScope(models.Model):
         return f'Escopo de {self.user.username}'
 
 
+class RecursoPBI(models.Model):
+    """
+    Recurso (link) do Power BI. Cadastre aqui os links e descrições.
+    Em cada recurso, escolha quais usuários podem acessá-lo.
+    """
+    nome = models.CharField('Nome', max_length=120)
+    descricao = models.CharField('Descrição', max_length=255, blank=True)
+    url = models.URLField('URL do relatório (embed)')
+    ordem = models.PositiveSmallIntegerField('Ordem de exibição', default=0)
+    usuarios_permitidos = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name='recursos_pbi',
+        blank=True,
+        verbose_name='Usuários com acesso',
+        help_text='Usuários que podem ver este link no Dashboard PBI. Deixe vazio para nenhum usuário.'
+    )
+
+    class Meta:
+        verbose_name = 'Recurso PBI (link)'
+        verbose_name_plural = 'Recursos PBI (links)'
+        ordering = ('ordem', 'nome')
+
+    def __str__(self):
+        return self.nome
+
+
 class StgVendas(models.Model):
     """Tabela staging de vendas importada do CSV."""
     # Identificação
@@ -77,6 +103,7 @@ class StgVendas(models.Model):
             ('pode_ver_relatorio_vendas', 'Pode ver relatório de vendas'),
             ('pode_exportar_excel', 'Pode exportar Excel'),
             ('pode_ver_todas_filiais', 'Pode ver todas as filiais'),
+            ('pode_ver_power_bi', 'Pode ver Dashboard Power BI'),
         ]
         indexes = [
             models.Index(fields=['data_faturamento', 'codfilial']),

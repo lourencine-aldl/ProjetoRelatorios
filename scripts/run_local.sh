@@ -18,23 +18,23 @@ pip install -q -r requirements.txt
 echo "Aplicando migrações..."
 python manage.py migrate --noinput
 
-echo "Criando usuário teste (se não existir)..."
+echo "Criando usuário admin (se não existir)..."
 python manage.py shell -c "
 from django.contrib.auth import get_user_model
 User = get_user_model()
-if not User.objects.filter(username='teste').exists():
-    u = User.objects.create_user(username='teste', password='123456')
+if not User.objects.filter(username='admin').exists():
+    u = User.objects.create_user(username='admin', password='admin123')
     u.is_staff = True
     u.is_superuser = True
     u.save()
-    print('Usuário teste criado (senha: 123456)')
+    print('Usuário admin criado (senha: admin123)')
 else:
-    print('Usuário teste já existe')
+    print('Usuário admin já existe')
 " 2>/dev/null || true
 
 echo ""
 echo "Servidor em: http://127.0.0.1:8000/"
-echo "  Teste: http://127.0.0.1:8000/teste/"
-echo "  Login: http://127.0.0.1:8000/login/  (teste / 123456)"
+echo "  Login: http://127.0.0.1:8000/login/  (admin / admin123)"
+echo "  Admin: http://127.0.0.1:8000/admin/"
 echo ""
 python manage.py runserver 0.0.0.0:8000

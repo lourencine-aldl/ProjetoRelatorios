@@ -18,9 +18,9 @@ def _excel_safe_datetime(val):
     return val
 
 
-# Se os valores no banco estiverem em escala errada (ex.: 1000x maior), use 1000.
-# Se já estiverem em reais corretos, use 1.
-VALOR_DIVISOR = 1000  # ajuste para 1 se valortotal/vldevolucao/valorbonificado já forem em reais
+# Usa config.VALOR_DIVISOR (valores no banco em escala 1000x). Ajuste em config/settings.py ou env VALOR_DIVISOR.
+from django.conf import settings
+VALOR_DIVISOR = getattr(settings, 'VALOR_DIVISOR', 1000)
 
 
 def _decimal_to_float(value, divisor=1):

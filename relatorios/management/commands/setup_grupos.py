@@ -22,11 +22,13 @@ class Command(BaseCommand):
                 'pode_ver_relatorio_vendas',
                 'pode_exportar_excel',
                 'pode_ver_todas_filiais',
+                'pode_ver_power_bi',
             ],
             'gestor': [
                 'pode_ver_relatorio_vendas',
                 'pode_exportar_excel',
                 'pode_ver_todas_filiais',
+                'pode_ver_power_bi',
             ],
             'vendas': [
                 'pode_ver_relatorio_vendas',

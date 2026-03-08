@@ -25,7 +25,7 @@ def parse_decimal_br(value):
         except (InvalidOperation, ValueError):
             return None
     s = str(value).strip()
-    # Formato 192.530.518 (só pontos): milhares + último grupo de 3 dígitos = decimal → 192.530,518 = 192530.518
+    # Formato pt-BR só pontos (ex.: 7.459.944 = 7459,944): milhares + último grupo de 3 dígitos = decimal
     if ',' not in s and '.' in s:
         parts = s.split('.')
         if len(parts) >= 2 and len(parts[-1]) == 3 and parts[-1].isdigit():

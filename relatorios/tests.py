@@ -29,6 +29,11 @@ class TestUtilsParse(TestCase):
         self.assertEqual(parse_decimal_br('3,14'), Decimal('3.14'))
         self.assertEqual(parse_decimal_br('98,32'), Decimal('98.32'))
 
+    def test_parse_decimal_br_7459_944(self):
+        """7.459.944 (só pontos) e 7.459,944 (vírgula decimal) = 7459,944 (não 7 milhões)."""
+        self.assertEqual(parse_decimal_br('7.459.944'), Decimal('7459.944'))
+        self.assertEqual(parse_decimal_br('7.459,944'), Decimal('7459.944'))
+
     def test_parse_decimal_br_vazio(self):
         self.assertIsNone(parse_decimal_br(''))
         self.assertIsNone(parse_decimal_br(None))
@@ -72,15 +77,15 @@ class TestServices(TestCase):
 
         self.dt = timezone.make_aware(datetime(2024, 3, 15, 10, 0))
         StgVendas.objects.create(
-            numnota='N001', numped='P001', valortotal=Decimal('100'), qtd=Decimal('2'),
+            numnota='N001', numped='P001', valortotal=Decimal('100'), valor_liquido=Decimal('100'), qtd=Decimal('2'),
             data_faturamento=self.dt, codfilial='01', supervisor='João', cliente='Cliente A', produto='Prod X',
         )
         StgVendas.objects.create(
-            numnota='N002', numped='P002', valortotal=Decimal('200'), qtd=Decimal('1'),
+            numnota='N002', numped='P002', valortotal=Decimal('200'), valor_liquido=Decimal('200'), qtd=Decimal('1'),
             data_faturamento=self.dt, codfilial='02', supervisor='Maria', cliente='Cliente B', produto='Prod Y',
         )
         StgVendas.objects.create(
-            numnota='N003', numped='P003', valortotal=Decimal('50'), qtd=Decimal('3'),
+            numnota='N003', numped='P003', valortotal=Decimal('50'), valor_liquido=Decimal('50'), qtd=Decimal('3'),
             data_faturamento=self.dt, codfilial='01', supervisor='João', cliente='Cliente C', produto='Prod X',
         )
 
@@ -175,21 +180,22 @@ class TestImportCommand(TestCase):
     """Testes do comando import_vendas_csv (row_from_relatorio_fat, row_to_stg)."""
 
     def test_row_from_relatorio_fat(self):
-        # Colunas na ordem do RELATORIO_FAT_MAP: data=1, codfilial=2, cliente=5, produto=12, ...
+        # Índices do RELATORIO_FAT_MAP: codfilial=0, data=1, cliente=5, produto=12, qtd=15,
+        # valortotal=19, supervisor=24, nomerca=26, secao=28, categoria=37, numnota=45, numped=46
         cols = [''] * 60
+        cols[0] = '02'
         cols[1] = '01-fev-2024'
-        cols[2] = '02'
         cols[5] = 'Cliente Teste'
         cols[12] = 'Produto X'
         cols[15] = '2'
-        cols[18] = '1,5'
-        cols[26] = 'Supervisor A'
-        cols[28] = 'RCA Nome'
-        cols[37] = '99,90'
-        cols[43] = 'Seção'
-        cols[45] = 'Categoria'
-        cols[51] = '1284874'
-        cols[52] = '1720040597'
+        cols[17] = '1,5'
+        cols[19] = '99,90'
+        cols[24] = 'Supervisor A'
+        cols[26] = 'RCA Nome'
+        cols[28] = 'Seção'
+        cols[37] = 'Categoria'
+        cols[45] = '1284874'
+        cols[46] = '1720040597'
         row = row_from_relatorio_fat(cols)
         self.assertEqual(row['DATA_FATURAMENTO'], '01-fev-2024')
         self.assertEqual(row['CODFILIAL'], '02')
