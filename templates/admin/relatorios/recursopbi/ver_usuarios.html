@@ -1,0 +1,49 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+<p><a href="{{ edit_url }}">← Editar link «{{ recurso.nome }}»</a> &nbsp;|&nbsp; <a href="{{ changelist_url }}">← Voltar à lista de links</a></p>
+
+<div class="module" style="margin-top: 1.5rem;">
+  <h2 style="margin-top: 0;">Ordem de exibição</h2>
+  <p style="color:#666;">Define em que posição este link aparece no Dashboard PBI.</p>
+  <form method="post" action="" style="display: flex; align-items: center; gap: 0.5rem; margin: 0.5rem 0;">
+    {% csrf_token %}
+    <label for="id_ordem">Ordem:</label>
+    <input type="number" name="ordem" id="id_ordem" value="{{ recurso.ordem }}" min="0" step="1" style="width: 5rem;">
+    <input type="submit" value="Salvar ordem" class="default">
+  </form>
+</div>
+
+<div class="module" style="margin-top: 1.5rem;">
+  <h2 style="margin-top: 0;">Usuários com acesso</h2>
+  <p style="color:#666;">Utilizadores que podem ver este link. Filtre por nome e use o link «Editar link» para adicionar ou remover usuários.</p>
+  <form method="get" action="" style="margin-bottom: 1rem;">
+    <label for="id_q">Filtrar usuário:</label>
+    <input type="text" name="q" id="id_q" value="{{ filtro_q }}" placeholder="Nome de usuário..." style="margin-left: 0.25rem;">
+    <input type="submit" value="Buscar">
+    {% if filtro_q %}<a href="?">Limpar filtro</a>{% endif %}
+  </form>
+  <table style="width: 100%;">
+    <thead>
+      <tr>
+        <th>Utilizador</th>
+        <th>Editar</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in usuarios %}
+      <tr>
+        <td>{{ u.username }}{% if u.get_full_name %} ({{ u.get_full_name }}){% endif %}</td>
+        <td><a href="{% url 'admin_gerir_links_usuario' u.pk %}">Editar utilizador</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="2">Nenhum utilizador com acesso a este link (apenas staff/admin).{% if filtro_q %} Nenhum resultado para «{{ filtro_q }}». <a href="?">Ver todos</a>{% endif %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<p style="margin-top: 1rem;"><a href="{{ changelist_url }}">← Voltar à lista de links</a></p>
+{% endblock %}

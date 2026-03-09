@@ -37,6 +37,8 @@
       overflow-y: auto;
       border-radius: 0 16px 16px 0;
     }
+    .app-sidebar.select-aberto { overflow: visible !important; }
+    .app-sidebar.select-aberto .sidebar-filters-content { overflow: visible !important; }
     .app-sidebar.open { width: var(--sidebar-width-open); min-width: var(--sidebar-width-open); align-items: stretch; padding-left: 1rem; padding-right: 1rem; }
     .sidebar-hamburger-btn {
       width: 44px; height: 44px;
@@ -85,7 +87,7 @@
     }
     .sidebar-filters-icon-only:hover { background: rgba(255,255,255,0.1); color: #fff; }
     .app-sidebar.open .sidebar-filters-icon-only { display: none; }
-    .sidebar-filters-content { display: none; flex-direction: column; gap: 0.75rem; padding: 0.5rem 0; overflow-y: auto; min-height: 0; }
+    .sidebar-filters-content { display: none; flex-direction: column; gap: 0.75rem; padding: 0.5rem 0; overflow-y: auto; overflow-x: visible; min-height: 0; }
     .app-sidebar.open .sidebar-filters-content { display: flex; }
     .sidebar-filters-content .filtros-header {
       display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem;
@@ -107,6 +109,75 @@
     }
     .sidebar-filters-content .field input::placeholder { color: rgba(255,255,255,0.45); }
     .sidebar-filters-content .field select option { background: #334155; color: #fff; }
+    /* Dropdown com busca dentro ao abrir */
+    .sidebar-filters-content .filtro-dropdown .dropdown-combo { position: relative; width: 100%; overflow: visible; }
+    .sidebar-filters-content .filtro-dropdown .dropdown-trigger {
+      width: 100%; padding: 0.5rem 0.65rem; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
+      background: rgba(255,255,255,0.06); color: #fff; font-size: 0.875rem; text-align: left; cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between; box-sizing: border-box;
+    }
+    .sidebar-filters-content .filtro-dropdown .dropdown-trigger:hover { background: rgba(255,255,255,0.08); }
+    .sidebar-filters-content .filtro-dropdown .dropdown-trigger::after { content: '▾'; font-size: 0.7rem; opacity: 0.8; }
+    .sidebar-filters-content .filtro-dropdown .dropdown-panel {
+      display: none; position: absolute; left: 0; right: 0; top: 100%; margin-top: 4px; z-index: 200;
+      background: var(--sidebar-gradient-end, #0f172a); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4); overflow: hidden; max-height: 320px; flex-direction: column;
+    }
+    .sidebar-filters-content .filtro-dropdown .dropdown-panel.open { display: flex; }
+    /* Bloco de busca fixo no topo do painel – sempre visível */
+    .sidebar-filters-content .filtro-dropdown .dropdown-panel .dropdown-busca-wrap {
+      flex: 0 0 auto; min-height: 72px; padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.2);
+      background: rgba(0,0,0,0.3); display: block;
+    }
+    .sidebar-filters-content .filtro-dropdown .dropdown-panel .dropdown-busca-wrap .dropdown-busca-label {
+      display: block; font-size: 0.75rem; font-weight: 600; color: rgba(255,255,255,0.95); margin-bottom: 0.4rem;
+    }
+    .sidebar-filters-content .filtro-dropdown .dropdown-panel .dropdown-busca-wrap .dropdown-pesquisa {
+      display: block; margin: 0; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px;
+      padding: 0.5rem 0.65rem; font-size: 0.875rem; min-height: 36px; width: 100%; box-sizing: border-box;
+      background: rgba(255,255,255,0.1); color: #fff;
+    }
+    .sidebar-filters-content .filtro-dropdown .dropdown-panel .dropdown-busca-wrap .dropdown-pesquisa::placeholder { color: rgba(255,255,255,0.6); }
+    .sidebar-filters-content .filtro-dropdown .dropdown-panel .dropdown-list {
+      overflow-y: auto; flex: 1 1 auto; min-height: 0; max-height: 240px; padding: 0.25rem 0;
+    }
+    .sidebar-filters-content .filtro-dropdown .dropdown-panel .dropdown-option {
+      padding: 0.45rem 0.65rem; color: rgba(255,255,255,0.9); cursor: pointer; font-size: 0.8125rem;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .sidebar-filters-content .filtro-dropdown .dropdown-panel .dropdown-option:hover { background: rgba(255,255,255,0.1); }
+    .sidebar-filters-content .filtro-dropdown .dropdown-panel .dropdown-option.hidden { display: none; }
+    .sidebar-filters-content .filtro-dropdown select.dropdown-select-native { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .sidebar-filters-content .field.filtro-com-busca .filtro-busca-input { margin-bottom: 0.25rem; }
+    .sidebar-filters-content .field.filtro-com-busca select { overflow: visible; }
+    .sidebar-filters-content .field.filtro-select-custom .filtro-select-wrap { position: relative; width: 100%; }
+    .sidebar-filters-content .field.filtro-select-custom .filtro-select-trigger {
+      width: 100%; padding: 0.5rem 0.65rem; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
+      background: rgba(255,255,255,0.06); color: #fff; font-size: 0.875rem; text-align: left; cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between; box-sizing: border-box;
+    }
+    .sidebar-filters-content .field.filtro-select-custom .filtro-select-trigger:hover { background: rgba(255,255,255,0.1); }
+    .sidebar-filters-content .field.filtro-select-custom .filtro-select-trigger::after { content: '▾'; font-size: 0.7rem; opacity: 0.8; }
+    .sidebar-filters-content .field.filtro-select-custom .filtro-select-hidden {
+      position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none;
+    }
+    .filtro-panel-floating {
+      position: fixed; z-index: 10000; background: #1e293b; border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.4); min-width: 200px; max-width: 320px;
+      max-height: 320px; display: flex; flex-direction: column; overflow: hidden;
+    }
+    .filtro-panel-floating .filtro-panel-busca { padding: 0.5rem 0.65rem; border-bottom: 1px solid rgba(255,255,255,0.15); flex-shrink: 0; }
+    .filtro-panel-floating .filtro-panel-busca input {
+      width: 100%; padding: 0.5rem 0.65rem; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px;
+      background: rgba(255,255,255,0.08); color: #fff; font-size: 0.875rem; box-sizing: border-box;
+    }
+    .filtro-panel-floating .filtro-panel-lista { overflow-y: auto; max-height: 260px; padding: 0.25rem 0; }
+    .filtro-panel-floating .filtro-panel-opcao {
+      padding: 0.5rem 0.75rem; color: rgba(255,255,255,0.9); cursor: pointer; font-size: 0.875rem;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .filtro-panel-floating .filtro-panel-opcao:hover { background: rgba(255,255,255,0.1); }
+    .filtro-panel-floating .filtro-panel-opcao.hidden { display: none; }
     .sidebar-filters-content .sidebar-filter-actions { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.25rem; }
     .sidebar-filters-content .sidebar-filter-actions .btn-filtrar { margin-top: 0; }
     .sidebar-filters-content .sidebar-filter-actions .btn-limpar { margin-top: 0; }
@@ -140,9 +211,14 @@
       transition: box-shadow 0.2s ease, transform 0.15s ease;
     }
     .app-sidebar .btn-toggle:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.25); transform: translateY(-50%) scale(1.05); color: #1e3a5f; }
-    .app-main { flex: 1; margin-left: var(--sidebar-width); min-width: 0; display: flex; flex-direction: column; transition: margin-left 0.25s ease; }
+    .app-main { flex: 1; margin-left: var(--sidebar-width); min-width: 0; display: flex; flex-direction: column; transition: margin-left 0.28s cubic-bezier(0.4, 0, 0.2, 1); overflow-x: hidden; position: relative; }
     .app-sidebar.open ~ .app-main { margin-left: var(--sidebar-width-open); }
-    .app-main-inner { flex: 1; padding: 1.5rem; }
+    .app-topbar {
+      flex: 0 0 auto; display: flex; align-items: center; justify-content: flex-end; padding: 0.6rem 1.5rem;
+      background: var(--header-bg); border-bottom: 1px solid #e2e8f0; color: #475569; font-size: 0.9rem;
+    }
+    .app-topbar .user-name { font-weight: 500; color: #334155; }
+    .app-main-inner { flex: 1; padding: 1.5rem; min-width: 0; overflow-x: hidden; }
     .btn { padding: 0.5rem 1rem; border-radius: 6px; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 500; }
     .btn-primary { background: var(--accent); color: #fff; }
     .btn-primary:hover { background: var(--accent-hover); color: #fff; }
@@ -159,11 +235,149 @@
     .pagination { margin-top: 1rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
     .pagination a, .pagination span { padding: 0.4rem 0.8rem; background: #e2e8f0; border-radius: 6px; text-decoration: none; color: #334155; font-size: 0.875rem; }
     .pagination .current { background: var(--accent); color: #fff; }
+    .content-filters-bar {
+      display: flex; flex-wrap: wrap; gap: 0.5rem 0.6rem; align-items: flex-end;
+      padding: 0.6rem 0.9rem; background: #fff; border-radius: 10px; margin-bottom: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;
+      overflow: visible;
+    }
+    .content-filters-bar .filtro-item { display: flex; flex-direction: column; gap: 0.1rem; min-width: 110px; max-width: 125px; overflow: visible; flex-shrink: 0; }
+    .content-filters-bar .filtro-item.multiselect-wrap { max-width: 145px; }
+    .content-filters-bar .filtro-item.multiselect-wrap[data-multiselect="supervisor"],
+    .content-filters-bar .filtro-item.multiselect-wrap[data-multiselect="vendedor"] {
+      min-width: 240px !important;
+      max-width: 240px !important;
+      width: 240px !important;
+    }
+    .content-filters-bar .filtro-item.multiselect-wrap[data-multiselect="supervisor"] .multiselect-trigger,
+    .content-filters-bar .filtro-item.multiselect-wrap[data-multiselect="vendedor"] .multiselect-trigger {
+      width: 240px !important;
+      min-width: 240px !important;
+    }
+    /* Pesquisar = metade da largura do filtro Supervisor (240px) → 120px, mas aumentando em relação ao default 125px fica igual; interpretado como “metade do supervisor” = 120px */
+    .content-filters-bar .filtro-item.filtro-item-pesquisar {
+      min-width: 180px !important; max-width: 180px !important; width: 180px !important;
+    }
+    .content-filters-bar .filtro-item.filtro-item-pesquisar input {
+      width: 100% !important; min-width: 0; box-sizing: border-box;
+    }
+    .content-filters-bar .filtro-item.multiselect-wrap > label:first-of-type { cursor: pointer; }
+    .content-filters-bar .filtro-item label { font-size: 0.6rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.6px; }
+    .content-filters-bar .filtro-item input,
+    .content-filters-bar .filtro-item select {
+      padding: 0.45rem 0.5rem; border: 1px solid #cbd5e1; border-radius: 5px;
+      background: #fff; color: #334155; font-size: 0.75rem; min-height: 32px; font-weight: 500;
+    }
+    .content-filters-bar .filtro-item input:focus,
+    .content-filters-bar .filtro-item select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
+    .content-filters-bar .filtro-item input::placeholder { color: #94a3b8; font-weight: 400; font-size: 0.75rem; }
+    .content-filters-bar .content-filters-bar-actions {
+      display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; flex-wrap: nowrap; align-self: flex-end;
+    }
+    .content-filters-bar .btn-limpar {
+      padding: 0.45rem 0.75rem; border-radius: 5px; font-weight: 500; font-size: 0.75rem;
+      background: #fff; color: #64748b; border: 1px solid #cbd5e1; text-decoration: none;
+      min-height: 32px; display: inline-flex; align-items: center; justify-content: center;
+      white-space: nowrap; flex-shrink: 0;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    .content-filters-bar .btn-limpar:hover { background: #f1f5f9; border-color: #94a3b8; color: #334155; }
+    .content-filters-bar .btn-aplicar {
+      padding: 0.45rem 1rem; border-radius: 5px; font-weight: 600; font-size: 0.75rem;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #fff; border: none; cursor: pointer;
+      min-height: 32px; flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(37,99,235,0.3); transition: all 0.2s ease;
+    }
+    .content-filters-bar .btn-aplicar:hover { box-shadow: 0 4px 12px rgba(37,99,235,0.4); transform: translateY(-1px); }
+    .multiselect-wrap { position: relative; min-width: 160px; max-width: 240px; z-index: 1; }
+    .multiselect-wrap.open { z-index: 2100; }
+    .multiselect-wrap .multiselect-trigger {
+          width: 100%; min-height: 32px; padding: 0.45rem 0.5rem; border: 1px solid #cbd5e1; border-radius: 5px;
+      background: #fff; color: #334155; font-size: 0.8125rem; font-weight: 500; text-align: left; cursor: pointer;
+          display: flex; align-items: center; justify-content: space-between; box-sizing: border-box;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease; font-size: 0.75rem;
+    }
+    .multiselect-wrap .multiselect-trigger:hover { border-color: #94a3b8; box-shadow: 0 0 0 2px rgba(37,99,235,0.08); }
+    .multiselect-wrap .multiselect-trigger::after { content: '▾'; font-size: 0.6rem; color: #64748b; transition: transform 0.2s ease; }
+    .multiselect-wrap.open .multiselect-trigger::after { transform: rotate(180deg); }
+    .multiselect-wrap.open .multiselect-trigger { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
+    .multiselect-panel {
+      display: none; position: fixed; z-index: 2000;
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      padding: 0.35rem; max-height: 380px; min-width: 280px; flex-direction: column; overflow: hidden;
+    }
+    .multiselect-wrap.open .multiselect-panel { display: flex !important; flex-direction: column; }
+    .multiselect-panel .multiselect-search {
+      flex-shrink: 0; padding: 0.4rem 0.5rem; margin-bottom: 0.3rem;
+      border: 1px solid #cbd5e1; border-radius: 5px;
+      font-size: 0.75rem; width: 100%; box-sizing: border-box; display: block;
+    }
+    .multiselect-panel .multiselect-search::placeholder { color: #64748b; }
+    .multiselect-panel .select-all {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 0.25rem; padding: 0.1rem 0.5rem; margin: 0 0 0.1rem 0;
+      font-size: 0.75rem; color: #475569; cursor: pointer; font-weight: 500; width: 100%; box-sizing: border-box;
+    }
+    .multiselect-panel .select-all input[type="checkbox"] { margin: 0; flex-shrink: 0; width: 1rem; height: 1rem; }
+    .multiselect-panel .multiselect-list {
+      overflow-y: auto; max-height: 260px; padding: 0 0.05rem 0 0; flex: 1; min-height: 0;
+    }
+    .multiselect-panel .multiselect-list label {
+      display: flex; align-items: center; gap: 0.25rem; padding: 0.1rem 0.5rem; margin: 0; line-height: 1.1;
+      font-size: 0.75rem; cursor: pointer; white-space: nowrap; overflow: visible; text-overflow: clip;
+      color: #334155; min-height: 0; width: 100%; box-sizing: border-box;
+    }
+    .multiselect-panel .multiselect-list label input[type="checkbox"] { margin: 0; flex-shrink: 0; width: 1rem; height: 1rem; }
+    .multiselect-panel .multiselect-list label.hidden { display: none; }
+    /* Filtros abaixo do card: mesmo espaçamento entre nomes do modelo (igual à sidebar) */
+    .content-filters-bar .filtro-item.multiselect-wrap .multiselect-panel .select-all,
+    .content-filters-bar .multiselect-wrap .multiselect-panel .select-all {
+      display: flex !important; align-items: center !important; gap: 0.25rem !important;
+      padding: 0.1rem 0.5rem !important; margin: 0 0 0.1rem 0 !important;
+      font-size: 0.75rem !important;
+    }
+    .content-filters-bar .filtro-item.multiselect-wrap .multiselect-panel .select-all input[type="checkbox"],
+    .content-filters-bar .multiselect-wrap .multiselect-panel .select-all input[type="checkbox"] {
+      width: 1rem !important; height: 1rem !important; margin: 0 !important; flex-shrink: 0 !important;
+    }
+    .content-filters-bar .filtro-item.multiselect-wrap .multiselect-panel .multiselect-list,
+    .content-filters-bar .multiselect-wrap .multiselect-panel .multiselect-list {
+      padding: 0 0.05rem 0 0 !important;
+    }
+    .content-filters-bar .filtro-item.multiselect-wrap .multiselect-panel .multiselect-list label,
+    .content-filters-bar .multiselect-wrap .multiselect-panel .multiselect-list label {
+      display: flex !important; align-items: center !important; gap: 0.25rem !important;
+      padding: 0.1rem 0.5rem !important; margin: 0 !important; line-height: 1.1 !important;
+      font-size: 0.75rem !important; min-height: 0 !important;
+    }
+    .content-filters-bar .filtro-item.multiselect-wrap .multiselect-panel .multiselect-list label input[type="checkbox"],
+    .content-filters-bar .multiselect-wrap .multiselect-panel .multiselect-list label input[type="checkbox"] {
+      width: 1rem !important; height: 1rem !important; margin: 0 !important; flex-shrink: 0 !important;
+    }
+    /* Multiselect na sidebar (tema escuro) */
+    .sidebar-filters-content .multiselect-wrap .multiselect-trigger {
+      width: 100%; min-height: 36px; padding: 0.5rem 0.65rem; border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.08); color: #fff; font-size: 0.875rem;
+    }
+    .sidebar-filters-content .multiselect-wrap .multiselect-trigger:hover { border-color: rgba(255,255,255,0.35); }
+    .sidebar-filters-content .multiselect-wrap .multiselect-trigger::after { color: rgba(255,255,255,0.8); }
+    .sidebar-filters-content .multiselect-panel {
+      background: var(--sidebar-gradient-end, #0f172a); border: 1px solid rgba(255,255,255,0.2);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .sidebar-filters-content .multiselect-panel .multiselect-search {
+      background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.25); color: #fff;
+    }
+    .sidebar-filters-content .multiselect-panel .multiselect-search::placeholder { color: rgba(255,255,255,0.5); }
+    .sidebar-filters-content .multiselect-panel .select-all { color: rgba(255,255,255,0.95); }
+    .sidebar-filters-content .multiselect-panel .multiselect-list label { color: #fff; }
   </style>
   {% block extra_css %}{% endblock %}
 </head>
 <body>
+  {% if request.resolver_match.url_name != 'login' and request.resolver_match.url_name != 'sem_permissao' %}
   <form method="get" id="form-filtros" action="{{ request.path }}">
+  {% endif %}
   <div class="app-wrap">
     <aside class="app-sidebar" id="app-sidebar" role="navigation">
       <button type="button" class="btn-toggle" id="sidebar-toggle" aria-label="Expandir ou recolher menu">›</button>
@@ -200,16 +414,23 @@
             <svg class="filtros-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
             <span class="filtros-titulo">Filtros</span>
           </div>
-          {% block sidebar_filters %}{% endblock %}
+          {% block sidebar_filters %}{% include "relatorios/_sidebar_filters.html" %}{% endblock %}
         </div>
       </div>
+      {% if user.is_authenticated %}
       <span class="nav-bottom">
         <a href="{% url 'logout' %}" style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.75rem;color:rgba(255,255,255,0.85);text-decoration:none;border-radius:8px;">
           <span class="icon">↪</span><span class="label">Sair</span>
         </a>
       </span>
+      {% endif %}
     </aside>
     <main class="app-main">
+      {% if user.is_authenticated and request.resolver_match.url_name != 'login' and request.resolver_match.url_name != 'sem_permissao' %}
+      <div class="app-topbar">
+        <span class="user-name">{{ user.get_username }}</span>
+      </div>
+      {% endif %}
       <div class="app-main-inner">
         {% if messages %}
         <ul class="app-messages" style="list-style:none; padding:0; margin:0 0 1rem;">
@@ -224,7 +445,84 @@
       </div>
     </main>
   </div>
+  {% if request.resolver_match.url_name != 'login' and request.resolver_match.url_name != 'sem_permissao' %}
   </form>
+  {% endif %}
+  <script>
+  (function(){
+    function multiselectOpenClose() {
+      document.addEventListener('click', function(e) {
+        var trigger = e.target.closest('.multiselect-trigger');
+        var wrap = trigger ? trigger.closest('.multiselect-wrap') : null;
+        
+        if (trigger && wrap) {
+          // Clique no botão trigger
+          e.preventDefault();
+          e.stopPropagation();
+          wrap.classList.toggle('open');
+          if (wrap.classList.contains('open')) {
+            positionFloatingPanel(wrap);
+            if (wrap.getAttribute('data-busca-clientes-url')) {
+              var s = wrap.querySelector('.multiselect-search');
+              if (s) setTimeout(function() { s.dispatchEvent(new Event('input')); }, 0);
+            }
+          }
+          return;
+        }
+        
+        // Clique em qualquer outro lugar - fechar todos
+        var clickedWrap = e.target.closest('.multiselect-wrap');
+        if (!clickedWrap) {
+          document.querySelectorAll('.multiselect-wrap.open').forEach(function(w) { 
+            w.classList.remove('open'); 
+          });
+        }
+      }, false);
+    }
+    
+    function positionFloatingPanel(wrap) {
+      var panel = wrap.querySelector('.multiselect-panel');
+      var trigger = wrap.querySelector('.multiselect-trigger');
+      if (!panel || !trigger) return;
+      
+      setTimeout(function() {
+        var triggerRect = trigger.getBoundingClientRect();
+        var panelHeight = panel.offsetHeight;
+        var panelWidth = panel.offsetWidth || 420;
+        var pad = 16;
+        var top = triggerRect.bottom + 12;
+        var left = triggerRect.left;
+        
+        // Se não cabe abaixo, coloca acima
+        if (top + panelHeight > window.innerHeight - pad) {
+          top = triggerRect.top - panelHeight - 12;
+        }
+        
+        // Se não cabe na direita, adjust
+        if (left + panelWidth > window.innerWidth - pad) {
+          left = window.innerWidth - panelWidth - pad;
+        }
+        
+        // Se não cabe na esquerda
+        if (left < pad) {
+          left = pad;
+        }
+        
+        panel.style.position = 'fixed';
+        panel.style.top = Math.max(pad, top) + 'px';
+        panel.style.left = Math.max(pad, left) + 'px';
+        panel.style.right = 'auto';
+        panel.style.width = panelWidth + 'px';
+      }, 0);
+    }
+    
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', multiselectOpenClose);
+    } else {
+      multiselectOpenClose();
+    }
+  })();
+  </script>
   <script>
   (function(){
     var sidebar = document.getElementById('app-sidebar');
@@ -246,7 +544,226 @@
     if (filtersIcon && sidebar) {
       filtersIcon.addEventListener('click', function(){ sidebar.classList.add('open'); if (btn) btn.textContent = '‹'; });
     }
-    /* Sidebar inicia fechada ao abrir a página */
+    (function() {
+      var content = document.getElementById('sidebar-filters-content');
+      if (!content || !sidebar) return;
+      var closeTimer = null;
+      function openSelect() { sidebar.classList.add('select-aberto'); if (closeTimer) clearTimeout(closeTimer); }
+      function closeSelect() { closeTimer = setTimeout(function() { sidebar.classList.remove('select-aberto'); }, 400); }
+      content.addEventListener('focusin', function(e) {
+        if (e.target && e.target.tagName === 'SELECT') openSelect();
+      });
+      content.addEventListener('mousedown', function(e) {
+        if (e.target && e.target.tagName === 'SELECT') openSelect();
+      });
+      content.addEventListener('focusout', function(e) {
+        if (e.target && e.target.tagName === 'SELECT') closeSelect();
+      });
+    })();
+    var filtroCustomInited = false;
+    function initFiltroSelectCustom() {
+      if (filtroCustomInited) return;
+      filtroCustomInited = true;
+      var form = document.getElementById('form-filtros');
+      if (!form) return;
+      var triggers = form.querySelectorAll('button.filtro-select-trigger[data-select]');
+      var panelAberto = null;
+      function fecharPanel() {
+        if (panelAberto && panelAberto.parentNode) panelAberto.parentNode.removeChild(panelAberto);
+        panelAberto = null;
+        document.removeEventListener('click', fecharFora);
+      }
+      function fecharFora(e) {
+        if (panelAberto && e.target !== panelAberto && !panelAberto.contains(e.target)) fecharPanel();
+      }
+      for (var i = 0; i < triggers.length; i++) {
+        (function(btn) {
+          var selId = btn.getAttribute('data-select');
+          var sel = selId ? document.getElementById(selId) : null;
+          if (!sel || !sel.options) return;
+          btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (panelAberto) fecharPanel();
+            var rect = btn.getBoundingClientRect();
+            var panel = document.createElement('div');
+            panel.className = 'filtro-panel-floating';
+            var pad = 8;
+            var w = Math.max(rect.width, 220);
+            var top = rect.bottom + 4;
+            if (top + 280 > window.innerHeight) top = rect.top - 284;
+            panel.style.left = Math.max(pad, Math.min(rect.left, window.innerWidth - w - pad)) + 'px';
+            panel.style.top = Math.max(pad, top) + 'px';
+            panel.style.width = w + 'px';
+            var buscaWrap = document.createElement('div');
+            buscaWrap.className = 'filtro-panel-busca';
+            var inp = document.createElement('input');
+            inp.type = 'text';
+            inp.placeholder = 'Buscar...';
+            inp.setAttribute('autocomplete', 'off');
+            buscaWrap.appendChild(inp);
+            panel.appendChild(buscaWrap);
+            var lista = document.createElement('div');
+            lista.className = 'filtro-panel-lista';
+            var optionsData = [];
+            for (var k = 0; k < sel.options.length; k++) {
+              var o = sel.options[k];
+              optionsData.push({ value: o.value, text: (o.text !== undefined ? o.text : (o.textContent || o.innerText || '')).trim() });
+            }
+            optionsData.forEach(function(item) {
+              var div = document.createElement('div');
+              div.className = 'filtro-panel-opcao';
+              div.setAttribute('data-value', item.value);
+              div.textContent = item.text;
+              div.addEventListener('click', function() {
+                sel.value = item.value;
+                btn.textContent = item.text || 'Todos';
+                fecharPanel();
+              });
+              lista.appendChild(div);
+            });
+            panel.appendChild(lista);
+            inp.addEventListener('input', function() {
+              var v = (inp.value || '').toLowerCase().trim();
+              var opts = lista.querySelectorAll('.filtro-panel-opcao');
+              for (var j = 0; j < opts.length; j++) {
+                var text = (opts[j].textContent || '').toLowerCase();
+                var isFirst = opts[j].getAttribute('data-value') === '' && j === 0;
+                opts[j].classList.toggle('hidden', !isFirst && v && text.indexOf(v) < 0);
+              }
+            });
+            inp.addEventListener('click', function(e) { e.stopPropagation(); });
+            panel.addEventListener('click', function(e) { e.stopPropagation(); });
+            document.body.appendChild(panel);
+            panelAberto = panel;
+            inp.focus();
+            setTimeout(function() { document.addEventListener('click', fecharFora); }, 0);
+          });
+        })(triggers[i]);
+      }
+    }
+    document.addEventListener('DOMContentLoaded', initFiltroSelectCustom);
+    window.addEventListener('load', initFiltroSelectCustom);
+    function initMultiselect() {
+      document.querySelectorAll('.multiselect-wrap:not([data-multiselect-inited])').forEach(function(wrap) {
+        var trigger = wrap.querySelector('.multiselect-trigger');
+        var panel = wrap.querySelector('.multiselect-panel');
+        var search = wrap.querySelector('.multiselect-search');
+        var selectAll = wrap.querySelector('.multiselect-select-all');
+        var list = wrap.querySelector('.multiselect-list');
+        if (!trigger || !panel || !list) return;
+        wrap.setAttribute('data-multiselect-inited', '1');
+        function updateTriggerText() {
+          var inputs = list.querySelectorAll('input[type="checkbox"][name]:not([class*="select-all"])');
+          var name = inputs.length ? inputs[0].getAttribute('name') : '';
+          var checked = list.querySelectorAll('input[name="' + name + '"]:checked');
+          trigger.textContent = checked.length === 0 ? 'Todos' : checked.length + ' selecionado(s)';
+        }
+        function updateSelectAll() {
+          if (!selectAll) return;
+          var visible = list.querySelectorAll('label:not(.hidden) input[type="checkbox"][name]');
+          var checked = list.querySelectorAll('label:not(.hidden) input[type="checkbox"][name]:checked');
+          selectAll.checked = visible.length > 0 && checked.length === visible.length;
+        }
+        function normalizeForSearch(s) {
+          return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+        }
+        var buscaClientesUrl = wrap.getAttribute('data-busca-clientes-url');
+        var buscaClientesTimer = null;
+        if (search && buscaClientesUrl) {
+          search.addEventListener('input', function() {
+            var v = (search.value || '').trim();
+            if (buscaClientesTimer) clearTimeout(buscaClientesTimer);
+            buscaClientesTimer = setTimeout(function() {
+              var form = document.getElementById('form-filtros');
+              var di = (form && form.querySelector('[name="data_inicio"]')) ? form.querySelector('[name="data_inicio"]').value : '';
+              var df = (form && form.querySelector('[name="data_fim"]')) ? form.querySelector('[name="data_fim"]').value : '';
+              var url = buscaClientesUrl + '?q=' + encodeURIComponent(v) + '&data_inicio=' + encodeURIComponent(di) + '&data_fim=' + encodeURIComponent(df);
+              var selectedSet = {};
+              list.querySelectorAll('label input[type="checkbox"][name="cliente"]:checked').forEach(function(cb) { selectedSet[cb.value] = true; });
+              fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(function(r) { return r.json(); }).then(function(data) {
+                var clientes = data.clientes || [];
+                list.querySelectorAll('.multiselect-no-results').forEach(function(p) { p.remove(); });
+                while (list.firstChild) list.removeChild(list.firstChild);
+                var seen = {};
+                function valOf(c) { return typeof c === 'object' && c && c.value !== undefined ? c.value : c; }
+                function labelOf(c) { return typeof c === 'object' && c && c.label !== undefined ? c.label : c; }
+                function clienteDisplayLabel(val) {
+                  if (val.indexOf('|') < 0) return val;
+                  var parts = val.split('|', 2);
+                  return parts[0] ? (parts[0] + ' - ' + (parts[1] || '')) : (parts[1] || val);
+                }
+                [].slice.call(Object.keys(selectedSet)).forEach(function(c) {
+                  seen[c] = true;
+                  var lab = document.createElement('label');
+                  var cb = document.createElement('input');
+                  cb.type = 'checkbox'; cb.name = 'cliente'; cb.value = c; cb.checked = true;
+                  lab.appendChild(cb); lab.appendChild(document.createTextNode(' ' + clienteDisplayLabel(c)));
+                  list.appendChild(lab);
+                  cb.addEventListener('change', function() { updateTriggerText(); updateSelectAll(); });
+                });
+                clientes.forEach(function(c) {
+                  var v = valOf(c);
+                  if (seen[v]) return;
+                  seen[v] = true;
+                  var lab = document.createElement('label');
+                  var cb = document.createElement('input');
+                  cb.type = 'checkbox'; cb.name = 'cliente'; cb.value = v;
+                  if (selectedSet[v]) cb.checked = true;
+                  lab.appendChild(cb); lab.appendChild(document.createTextNode(' ' + labelOf(c)));
+                  list.appendChild(lab);
+                  cb.addEventListener('change', function() { updateTriggerText(); updateSelectAll(); });
+                });
+                if (v && clientes.length === 0 && Object.keys(selectedSet).length === 0) {
+                  var noRes = document.createElement('p');
+                  noRes.className = 'multiselect-no-results';
+                  noRes.style.cssText = 'padding:0.5rem; margin:0; color:#64748b; font-size:0.8125rem;';
+                  noRes.textContent = 'Nenhum resultado. Ajuste o texto da pesquisa.';
+                  list.appendChild(noRes);
+                }
+                updateTriggerText();
+                updateSelectAll();
+              }).catch(function() {
+                var noRes = list.querySelector('.multiselect-no-results');
+                if (!noRes) { noRes = document.createElement('p'); noRes.className = 'multiselect-no-results'; noRes.style.cssText = 'padding:0.5rem; margin:0; color:#64748b; font-size:0.8125rem;'; noRes.textContent = 'Erro ao buscar. Tente novamente.'; list.appendChild(noRes); }
+              });
+            }, 350);
+          });
+        } else if (search) search.addEventListener('input', function() {
+          var v = normalizeForSearch(search.value);
+          list.querySelectorAll('label').forEach(function(lab) {
+            var text = normalizeForSearch(lab.textContent || '');
+            lab.classList.toggle('hidden', v && text.indexOf(v) < 0);
+          });
+          var noRes = list.querySelector('.multiselect-no-results');
+          var visible = list.querySelectorAll('label:not(.hidden)').length;
+          if (v && visible === 0) {
+            if (!noRes) {
+              noRes = document.createElement('p');
+              noRes.className = 'multiselect-no-results';
+              noRes.style.cssText = 'padding:0.5rem; margin:0; color:#64748b; font-size:0.8125rem;';
+              noRes.textContent = 'Nenhum resultado. Ajuste o texto da pesquisa.';
+              list.appendChild(noRes);
+            }
+            noRes.style.display = 'block';
+          } else if (noRes) noRes.style.display = 'none';
+          updateSelectAll();
+        });
+        if (selectAll) selectAll.addEventListener('change', function() {
+          list.querySelectorAll('label:not(.hidden) input[type="checkbox"][name]').forEach(function(cb) { cb.checked = selectAll.checked; });
+          updateTriggerText();
+        });
+        list.querySelectorAll('input[type="checkbox"][name]').forEach(function(cb) {
+          cb.addEventListener('change', function() { updateTriggerText(); updateSelectAll(); });
+        });
+        updateTriggerText();
+      });
+    }
+    function runMultiselect() {
+      try { initMultiselect(); } catch (e) { console.warn('initMultiselect:', e); }
+    }
+    document.addEventListener('DOMContentLoaded', runMultiselect);
+    window.addEventListener('load', runMultiselect);
   })();
   </script>
   {% block extra_js %}{% endblock %}

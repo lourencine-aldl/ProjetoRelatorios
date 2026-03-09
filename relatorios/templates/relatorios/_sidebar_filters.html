@@ -1,0 +1,50 @@
+{% load relatorios_filters %}
+<div class="sidebar-filter-actions">
+  <button type="submit" class="btn-filtrar">Filtrar</button>
+  <a href="{% url 'dashboard' %}?nocache=1" class="btn-limpar">Limpar filtros</a>
+</div>
+{% if clientes %}
+<div class="field multiselect-wrap" data-multiselect="cliente-sidebar" data-busca-clientes-url="{% url 'api_busca_clientes' %}">
+  <label>Cliente</label>
+  <button type="button" class="multiselect-trigger" aria-haspopup="listbox">{% if selected_clientes %}{{ selected_clientes|length }} selecionado(s){% else %}Todos{% endif %}</button>
+  <div class="multiselect-panel">
+    <input type="text" class="multiselect-search" placeholder="Pesquisar cliente (código ou nome)" autocomplete="off">
+    <label class="select-all"><input type="checkbox" class="multiselect-select-all"> Selecionar tudo</label>
+    <div class="multiselect-list">
+      {% for c in selected_clientes %}
+      <label><input type="checkbox" name="cliente" value="{{ c|escape }}" checked> {{ c|cliente_display }}</label>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% if fornecedores_opcoes %}
+<div class="field multiselect-wrap" data-multiselect="fornecedor-sidebar">
+  <label>Fornecedor</label>
+  <button type="button" class="multiselect-trigger" aria-haspopup="listbox">{% if selected_fornecedores %}{{ selected_fornecedores|length }} selecionado(s){% else %}Todos{% endif %}</button>
+  <div class="multiselect-panel">
+    <input type="text" class="multiselect-search" placeholder="Digite para pesquisar (ex.: nome)" autocomplete="off">
+    <label class="select-all"><input type="checkbox" class="multiselect-select-all"> Selecionar tudo</label>
+    <div class="multiselect-list">
+      {% for f in fornecedores_opcoes %}
+      <label><input type="checkbox" name="fornecedor" value="{{ f }}" {% if f in selected_fornecedores %}checked{% endif %}> {{ f }}</label>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% if produtos %}
+<div class="field multiselect-wrap" data-multiselect="produto-sidebar">
+  <label>Produto</label>
+  <button type="button" class="multiselect-trigger" aria-haspopup="listbox">{% if selected_produtos %}{{ selected_produtos|length }} selecionado(s){% else %}Todos{% endif %}</button>
+  <div class="multiselect-panel">
+    <input type="text" class="multiselect-search" placeholder="Digite para pesquisar (ex.: nome)" autocomplete="off">
+    <label class="select-all"><input type="checkbox" class="multiselect-select-all"> Selecionar tudo</label>
+    <div class="multiselect-list">
+      {% for p in produtos %}
+      <label><input type="checkbox" name="produto" value="{{ p }}" {% if p in selected_produtos %}checked{% endif %}> {{ p }}</label>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}

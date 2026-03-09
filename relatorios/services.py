@@ -5,7 +5,10 @@ Queries de agregação para dashboard e relatório, aplicando UserScope e permis
 from datetime import time as dt_time
 from decimal import Decimal
 from django.db.models import Sum, Count, Q, F, Value, DecimalField
-from django.db.models.functions import TruncDate, Coalesce
+from functools import reduce
+import operator
+from django.db.models.functions import TruncDate, Coalesce, Concat
+from django.db.models import CharField
 from django.utils import timezone
 
 from .models import StgVendas, UserScope
@@ -44,25 +47,56 @@ def get_queryset_vendas(user, data_inicio=None, data_fim=None, codfilial=None, s
                 end = timezone.make_aware(end)
             qs = qs.filter(data_faturamento__lte=end)
     if codfilial:
-        qs = qs.filter(codfilial=codfilial)
+        _filiais = codfilial if isinstance(codfilial, (list, tuple)) else [codfilial]
+        _filiais = [x for x in _filiais if x]
+        if _filiais:
+            qs = qs.filter(codfilial__in=_filiais)
     if supervisor:
-        qs = qs.filter(supervisor=supervisor)
+        _sup = supervisor if isinstance(supervisor, (list, tuple)) else [supervisor]
+        _sup = [x for x in _sup if x]
+        if _sup:
+            qs = qs.filter(supervisor__in=_sup)
     if secao:
         qs = qs.filter(secao=secao)
     if categoria:
         qs = qs.filter(categoria=categoria)
     if cliente:
-        qs = qs.filter(cliente=cliente)
+        _cli = cliente if isinstance(cliente, (list, tuple)) else [cliente]
+        _cli = [x for x in _cli if x]
+        if _cli:
+            pairs = []
+            plain = []
+            for x in _cli:
+                if '|' in x:
+                    parts = x.split('|', 1)
+                    if len(parts) == 2:
+                        pairs.append((parts[0].strip(), parts[1].strip()))
+                else:
+                    plain.append(x)
+            if pairs and plain:
+                qs = qs.filter(Q(cliente__in=plain) | reduce(operator.or_, [Q(codcliente=c, cliente=n) for c, n in pairs]))
+            elif pairs:
+                qs = qs.filter(reduce(operator.or_, [Q(codcliente=c, cliente=n) for c, n in pairs]))
+            else:
+                qs = qs.filter(cliente__in=plain)
     if vendedor:
-        qs = qs.filter(nomerca=vendedor)
+        _vend = vendedor if isinstance(vendedor, (list, tuple)) else [vendedor]
+        _vend = [x for x in _vend if x]
+        if _vend:
+            qs = qs.filter(nomerca__in=_vend)
     if fornecedor:
-        # Quando o dropdown é preenchido com seção (fallback), filtrar por seção
-        if filter_fornecedor_as_secao:
-            qs = qs.filter(secao=fornecedor)
-        else:
-            qs = qs.filter(fornecedor=fornecedor)
+        _forn = fornecedor if isinstance(fornecedor, (list, tuple)) else [fornecedor]
+        _forn = [x for x in _forn if x]
+        if _forn:
+            if filter_fornecedor_as_secao:
+                qs = qs.filter(secao__in=_forn)
+            else:
+                qs = qs.filter(fornecedor__in=_forn)
     if produto:
-        qs = qs.filter(produto=produto)
+        _prod = produto if isinstance(produto, (list, tuple)) else [produto]
+        _prod = [x for x in _prod if x]
+        if _prod:
+            qs = qs.filter(produto__in=_prod)
     # Pesquisa livre (nota, cliente, produto, supervisor, vendedor, etc.)
     if q and q.strip():
         termo = q.strip()
@@ -95,8 +129,20 @@ def get_queryset_vendas(user, data_inicio=None, data_fim=None, codfilial=None, s
     return qs
 
 
+def get_positividade(qs):
+    """Positivação: clientes distintos por mês com compra (CODCLI preenchido, QTDEVOL=0 ou NULL)."""
+    return (
+        qs.filter(codcliente__isnull=False)
+        .exclude(codcliente='')
+        .filter(Q(qtdevol=0) | Q(qtdevol__isnull=True))
+        .values('codcliente', 'data_faturamento__year', 'data_faturamento__month')
+        .distinct()
+        .count()
+    )
+
+
 def get_cards_kpis(qs):
-    """Retorna dict com totais para cards: total_vendido = soma de Valor_Liquido, qtd_itens, peso_total, devolucao, bonificacao, ticket_medio."""
+    """Retorna dict com totais para cards: total_vendido, qtd_itens, peso_total, devolucao, bonificacao, ticket_medio, positividade."""
     _dec = DecimalField(max_digits=16, decimal_places=4)
     agg = qs.aggregate(
         total=Sum(Coalesce(F('valor_liquido'), Value(Decimal('0'), output_field=_dec), output_field=_dec)),
@@ -109,6 +155,7 @@ def get_cards_kpis(qs):
     total = agg['total'] or Decimal('0')
     num_notas = agg['num_notas'] or 0
     ticket = (total / num_notas) if num_notas else Decimal('0')
+    positividade = get_positividade(qs)
     return {
         'total_vendido': total,
         'qtd_itens': agg['qtd'] or Decimal('0'),
@@ -117,11 +164,26 @@ def get_cards_kpis(qs):
         'bonificacao': agg['bonificacao'] or Decimal('0'),
         'ticket_medio': ticket,
         'num_notas': num_notas,
+        'positividade': positividade,
     }
 
 
 def get_serie_temporal(qs, agrupamento='dia'):
-    """Série temporal: por dia ou por mês. Retorna lista de {periodo, valor}. Compatível com SQLite."""
+    """Série temporal: por dia, mês ou ano. Retorna lista de {periodo, valor}. Compatível com SQLite."""
+    if agrupamento == 'ano':
+        rows = (
+            qs.values('data_faturamento__year')
+            .annotate(valor=Sum('valortotal'))
+            .order_by('data_faturamento__year')
+        )
+        return [
+            {
+                'periodo': '{:04d}-01-01'.format(row['data_faturamento__year'] or 0),
+                'valor': float(row['valor']) if row['valor'] else 0,
+            }
+            for row in rows
+            if row.get('data_faturamento__year')
+        ]
     if agrupamento == 'mes':
         # Agrupamento por mês: usar __year e __month (funciona em SQLite; TruncMonth pode falhar)
         rows = (
@@ -202,10 +264,18 @@ def get_vendas_por_supervisor(qs, limit=15):
 
 
 def get_top_clientes(qs, limit=50):
-    """Top N clientes por valor (para gráfico com barra de rolagem)."""
+    """Top N clientes por valor. Inclui cliente_formatado e display (CodCli - Cliente) para gráfico e filtro."""
     return list(
-        qs.values('cliente')
-        .annotate(valor=Sum('valortotal'))
+        qs.values('codcliente', 'cliente', 'cliente_formatado')
+        .annotate(
+            valor=Sum('valortotal'),
+            display=Concat(
+                Coalesce(F('codcliente'), Value('')),
+                Value(' - '),
+                Coalesce(F('cliente'), Value('')),
+                output_field=CharField(max_length=250),
+            ),
+        )
         .order_by('-valor')[:limit]
     )
 

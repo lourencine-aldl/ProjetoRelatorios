@@ -3,82 +3,23 @@
 {% block title %}Dashboard - Relatórios{% endblock %}
 {% block extra_css %}
 <style>
-  .dashboard-faixa .grafico { background: #fff; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; min-height: 280px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-  .sidebar-filters-content .filtro-dropdown .dropdown-pesquisa { margin-bottom: 0.3rem; padding: 0.45rem 0.6rem; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; background: rgba(255,255,255,0.08); color: #fff; width: 100%; box-sizing: border-box; }
-  .chart-scroll { overflow-y: scroll; overflow-x: hidden; min-height: 0; -webkit-overflow-scrolling: touch; }
-  .chart-scroll::-webkit-scrollbar { width: 10px; }
+  .dashboard-faixa .grafico { background: #fff; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; min-height: 280px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); min-width: 0; }
+  .dashboard-faixa .grafico h3 { margin: 0 0 0.75rem 0; font-size: 1rem; }
+  .chart-scroll { overflow-y: auto; overflow-x: auto; min-height: 0; -webkit-overflow-scrolling: touch; }
+  .chart-scroll::-webkit-scrollbar { width: 10px; height: 8px; }
   .chart-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
   .chart-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
   .chart-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
-  .chart-canvas-wrap { display: block; }
+  .chart-canvas-wrap { display: block; width: 100%; min-height: 320px; position: relative; }
+  .chart-canvas-wrap canvas { max-width: 100%; display: block; }
   .grafico { cursor: default; }
   .grafico .chart-click-hint { font-size: 0.8rem; color: #64748b; margin-top: 0.25rem; }
 </style>
 {% endblock %}
-{% block sidebar_filters %}
-  <div class="sidebar-filter-actions">
-    <button type="submit" class="btn-filtrar">Filtrar</button>
-    <a href="{% url 'dashboard' %}?nocache=1" class="btn-limpar">Limpar filtros</a>
-  </div>
-  <div class="field">
-    <label>Data início</label>
-    <input type="date" name="data_inicio" value="{{ data_inicio|date:'Y-m-d' }}">
-  </div>
-  <div class="field">
-    <label>Data fim</label>
-    <input type="date" name="data_fim" value="{{ data_fim|date:'Y-m-d' }}">
-  </div>
-  <div class="field">
-    <label>Agrupamento</label>
-    <select name="agrupamento"><option value="dia" {% if request.GET.agrupamento == 'mes' %}{% else %}selected{% endif %}>Dia</option><option value="mes" {% if request.GET.agrupamento == 'mes' %}selected{% endif %}>Mês</option></select>
-  </div>
-  <div class="field">
-    <label>Pesquisar</label>
-    <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Nota, cliente, produto...">
-  </div>
-  {% if filiais %}
-  <div class="field">
-    <label>Filial</label>
-    <select name="codfilial" id="select-codfilial"><option value="">Todas</option>{% for f in filiais %}<option value="{{ f }}" {% if request.GET.codfilial == f %}selected{% endif %}>{{ f }}</option>{% endfor %}</select>
-  </div>
-  {% endif %}
-  {% if supervisores %}
-  <div class="field">
-    <label>Supervisor</label>
-    <select name="supervisor" id="select-supervisor"><option value="">Todos</option>{% for s in supervisores %}<option value="{{ s }}" {% if request.GET.supervisor == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
-  </div>
-  {% endif %}
-  {% if vendedores %}
-  <div class="field">
-    <label>Vendedor</label>
-    <select name="vendedor" id="select-vendedor"><option value="">Todos</option>{% for v in vendedores %}<option value="{{ v }}" {% if request.GET.vendedor == v %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
-  </div>
-  {% endif %}
-  {% if clientes %}
-  <div class="field filtro-dropdown">
-    <label>Cliente</label>
-    <input type="text" class="dropdown-pesquisa" placeholder="Filtrar..." data-target="select-cliente" autocomplete="off">
-    <select name="cliente" id="select-cliente"><option value="">Todos</option>{% for c in clientes %}<option value="{{ c }}" {% if request.GET.cliente == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
-  </div>
-  {% endif %}
-  {% if fornecedores_opcoes %}
-  <div class="field filtro-dropdown">
-    <label>Fornecedor</label>
-    <input type="text" class="dropdown-pesquisa" placeholder="Filtrar..." data-target="select-fornecedor" autocomplete="off">
-    <select name="fornecedor" id="select-fornecedor"><option value="">Todos</option>{% for f in fornecedores_opcoes %}<option value="{{ f }}" {% if request.GET.fornecedor == f %}selected{% endif %}>{{ f }}</option>{% endfor %}</select>
-  </div>
-  {% endif %}
-  {% if produtos %}
-  <div class="field filtro-dropdown">
-    <label>Produto</label>
-    <input type="text" class="dropdown-pesquisa" placeholder="Filtrar..." data-target="select-produto" autocomplete="off">
-    <select name="produto" id="select-produto"><option value="">Todos</option>{% for p in produtos %}<option value="{{ p }}" {% if request.GET.produto == p %}selected{% endif %}>{{ p }}</option>{% endfor %}</select>
-  </div>
-  {% endif %}
-{% endblock %}
 {% block content %}
 <style>
-  .cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+  .cards { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1100px) { .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
   @media (max-width: 900px) { .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   @media (max-width: 500px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .card { background: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
@@ -104,20 +45,93 @@
     <div class="card"><h3>Devolução</h3><span class="valor">{{ cards.devolucao|br_currency }}</span></div>
     <div class="card"><h3>Ticket médio</h3><span class="valor">{{ cards.ticket_medio|br_currency }}</span></div>
     <div class="card"><h3>Nº notas</h3><span class="valor">{{ cards.num_notas|br_int_sep }}</span></div>
+    <div class="card"><h3>Positivação</h3><span class="valor">{{ cards.positividade|br_int_sep }}</span></div>
   </div>
+
+  {% if filiais or supervisores or vendedores or clientes or fornecedores_opcoes or produtos %}
+  <div class="content-filters-bar" style="margin-top:0.25rem; margin-bottom:1.5rem;">
+    <div class="filtro-item">
+      <label>Data início</label>
+      <input type="date" name="data_inicio" value="{{ data_inicio|date:'Y-m-d' }}">
+    </div>
+    <div class="filtro-item">
+      <label>Data fim</label>
+      <input type="date" name="data_fim" value="{{ data_fim|date:'Y-m-d' }}">
+    </div>
+    <div class="filtro-item">
+      <label>Agrupamento</label>
+      <select name="agrupamento">
+        <option value="dia" {% if agrupamento == 'dia' %}selected{% endif %}>Dia</option>
+        <option value="mes" {% if agrupamento == 'mes' %}selected{% endif %}>Mês</option>
+        <option value="ano" {% if agrupamento == 'ano' %}selected{% endif %}>Ano</option>
+      </select>
+    </div>
+    {% if filiais %}
+    <div class="filtro-item multiselect-wrap" data-multiselect="codfilial">
+      <label>Filial</label>
+      <button type="button" class="multiselect-trigger" aria-haspopup="listbox">{% if selected_filiais %}{{ selected_filiais|length }} selecionada(s){% else %}Todas{% endif %}</button>
+      <div class="multiselect-panel">
+        <input type="text" class="multiselect-search" placeholder="Digite para pesquisar (ex.: nome)" autocomplete="off">
+        <label class="select-all"><input type="checkbox" class="multiselect-select-all"> Selecionar tudo</label>
+        <div class="multiselect-list">
+          {% for f in filiais %}
+          <label><input type="checkbox" name="codfilial" value="{{ f }}" {% if f in selected_filiais %}checked{% endif %}> {{ f }}</label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    <div class="filtro-item filtro-item-pesquisar">
+      <label>Pesquisar</label>
+      <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Nota, cliente...">
+    </div>
+    {% if supervisores %}
+    <div class="filtro-item multiselect-wrap" id="multiselect-supervisor" data-multiselect="supervisor">
+      <label>Supervisor</label>
+      <button type="button" class="multiselect-trigger" aria-haspopup="listbox">{% if selected_supervisores %}{{ selected_supervisores|length }} selecionado(s){% else %}Todos{% endif %}</button>
+      <div class="multiselect-panel">
+        <input type="text" class="multiselect-search" placeholder="Digite para pesquisar (ex.: nome)" autocomplete="off">
+        <label class="select-all"><input type="checkbox" class="multiselect-select-all"> Selecionar tudo</label>
+        <div class="multiselect-list">
+          {% for s in supervisores %}
+          <label><input type="checkbox" name="supervisor" value="{{ s }}" {% if s in selected_supervisores %}checked{% endif %}> {{ s }}</label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% if vendedores %}
+    <div class="filtro-item multiselect-wrap" data-multiselect="vendedor">
+      <label>Vendedor</label>
+      <button type="button" class="multiselect-trigger" aria-haspopup="listbox">{% if selected_vendedores %}{{ selected_vendedores|length }} selecionado(s){% else %}Todos{% endif %}</button>
+      <div class="multiselect-panel">
+        <input type="text" class="multiselect-search" placeholder="Digite para pesquisar (ex.: nome)" autocomplete="off">
+        <label class="select-all"><input type="checkbox" class="multiselect-select-all"> Selecionar tudo</label>
+        <div class="multiselect-list">
+          {% for v in vendedores %}
+          <label><input type="checkbox" name="vendedor" value="{{ v }}" {% if v in selected_vendedores %}checked{% endif %}> {{ v }}</label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    <div class="content-filters-bar-actions">
+      <a href="{% url 'dashboard' %}?nocache=1" class="btn-limpar">Limpar filtros</a>
+      <button type="submit" class="btn-aplicar">Filtrar</button>
+    </div>
+  </div>
+  {% endif %}
 
   <section class="dashboard-faixa" style="margin-top:1.5rem;">
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; min-width: 0;">
       <div class="grafico" style="min-width: 0;">
-        <h3>Vendas por {% if agrupamento == 'mes' %}mês{% else %}dia{% endif %}</h3>
-        <p class="chart-click-hint">Clique em um ponto para filtrar por esse período.</p>
+        <h3>Vendas por {% if agrupamento == 'ano' %}ano{% elif agrupamento == 'mes' %}mês{% else %}dia{% endif %}</h3>
         <div style="height:280px; min-width:300px; position:relative;">
           <canvas id="chartVendasDia" width="400" height="280" style="max-width:100%; cursor:pointer;"></canvas>
         </div>
       </div>
       <div class="grafico" style="min-width: 0;">
         <h3>Top 10 clientes</h3>
-        <p class="chart-click-hint">Clique em uma barra para filtrar por esse cliente.</p>
         <div class="chart-scroll" style="height:320px; min-width:300px;">
           <div class="chart-canvas-wrap"><canvas id="chartCliente" style="cursor:pointer;"></canvas></div>
         </div>
@@ -126,17 +140,15 @@
   </section>
 
   <section class="dashboard-faixa" style="margin-top:1.5rem;">
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-      <div class="grafico">
-        <h3>{{ fornecedores_label|default:"Top 10 fornecedores" }}</h3>
-        <p class="chart-click-hint">Clique em uma barra para filtrar por esse fornecedor.</p>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; min-width: 0;">
+      <div class="grafico" style="min-width: 0;">
+        <h3>{{ fornecedores_titulo|default:"Top 10 fornecedores" }}</h3>
         <div class="chart-scroll" style="height:320px;">
           <div class="chart-canvas-wrap"><canvas id="chartFornecedor" style="cursor:pointer;"></canvas></div>
         </div>
       </div>
-      <div class="grafico">
+      <div class="grafico" style="min-width: 0;">
         <h3>Top 10 produtos</h3>
-        <p class="chart-click-hint">Clique em uma barra para filtrar por esse produto.</p>
         <div class="chart-scroll" style="height:320px;">
           <div class="chart-canvas-wrap"><canvas id="chartProduto" style="cursor:pointer;"></canvas></div>
         </div>
@@ -145,17 +157,15 @@
   </section>
 
   <section class="dashboard-faixa" style="margin-top:1.5rem;">
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-      <div class="grafico">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; min-width: 0;">
+      <div class="grafico" style="min-width: 0;">
         <h3>Top 10 supervisores</h3>
-        <p class="chart-click-hint">Clique em uma barra para filtrar por esse supervisor.</p>
         <div class="chart-scroll" style="height:320px;">
           <div class="chart-canvas-wrap"><canvas id="chartSupervisor" style="cursor:pointer;"></canvas></div>
         </div>
       </div>
-      <div class="grafico">
+      <div class="grafico" style="min-width: 0;">
         <h3>Top 10 vendedores</h3>
-        <p class="chart-click-hint">Clique em uma barra para filtrar por esse vendedor.</p>
         <div class="chart-scroll" style="height:320px;">
           <div class="chart-canvas-wrap"><canvas id="chartVendedor" style="cursor:pointer;"></canvas></div>
         </div>
@@ -163,25 +173,6 @@
     </div>
   </section>
 
-<script>
-(function(){
-  var form = document.getElementById('form-filtros');
-  if (form) {
-    form.querySelectorAll('.dropdown-pesquisa').forEach(function(inp){
-      var targetId = inp.getAttribute('data-target');
-      if (!targetId) return;
-      var sel = form.querySelector('#' + targetId);
-      if (!sel) return;
-      inp.addEventListener('input', function(){
-        var v = (this.value || '').toLowerCase();
-        [].slice.call(sel.options).forEach(function(opt){
-          opt.style.display = (!v || (opt.text || '').toLowerCase().indexOf(v) >= 0) ? '' : 'none';
-        });
-      });
-    });
-  }
-})();
-</script>
 {{ serie_temporal|json_script:"serie-temporal-data" }}
 <script type="application/json" id="dashboard-config">{"agrupamento": "{{ agrupamento|default:'dia' }}", "url": "{% url 'dashboard' %}"}</script>
 {{ top_clientes|json_script:"top-clientes-data" }}
@@ -204,17 +195,23 @@
     if (!el || !el.textContent) return { agrupamento: 'dia', url: '' };
     try { return JSON.parse(el.textContent.trim()); } catch (e) { return { agrupamento: 'dia', url: '' }; }
   }
-  function getCurrentParams() {
-    var form = document.getElementById('form-filtros');
+  /** Parâmetros atuais a partir do formulário (preserva supervisor, cliente, etc. ao clicar no gráfico). */
+  function getParamsFromForm() {
     var params = {};
-    if (form) {
-      var els = form.querySelectorAll('input, select');
-      for (var i = 0; i < els.length; i++) {
-        var e = els[i];
-        var n = (e.name || '').trim();
-        if (!n) continue;
-        var v = (e.type === 'checkbox' || e.type === 'radio') ? (e.checked ? e.value : null) : (e.value || '');
-        if (v !== null && v !== '') params[n] = v;
+    var form = document.getElementById('form-filtros');
+    if (!form) return params;
+    var inputs = form.querySelectorAll('input, select');
+    for (var i = 0; i < inputs.length; i++) {
+      var el = inputs[i];
+      var name = (el.name || '').trim();
+      if (!name || name === 'nocache') continue;
+      if (el.type === 'checkbox' || el.type === 'radio') {
+        if (!el.checked) continue;
+        if (!params[name]) params[name] = [];
+        if (params[name].indexOf(el.value) < 0) params[name].push(el.value);
+      } else {
+        var v = (el.value || '').trim();
+        if (v !== '') params[name] = v;
       }
     }
     return params;
@@ -222,7 +219,16 @@
   function redirectWithParams(params) {
     var cfg = getConfig();
     var base = (cfg.url || window.location.pathname || '/dashboard/').replace(/\?.*$/, '');
-    var q = Object.keys(params).map(function(k){ return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); }).join('&');
+    var parts = [];
+    Object.keys(params).forEach(function(k) {
+      var v = params[k];
+      if (Array.isArray(v)) {
+        v.forEach(function(one) { parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(one)); });
+      } else {
+        parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(v));
+      }
+    });
+    var q = parts.join('&');
     window.location = q ? (base + '?' + q) : base;
   }
   function formatBr(val) {
@@ -270,9 +276,13 @@
                 var idx = elements[0].index;
                 var p = (serie[idx] && serie[idx].periodo) ? String(serie[idx].periodo) : '';
                 if (!p) return;
-                var params = getCurrentParams();
+                var params = getParamsFromForm();
                 params.data_inicio = p;
-                if ((cfg.agrupamento || 'dia') === 'mes') {
+                var agr = cfg.agrupamento || 'dia';
+                if (agr === 'ano') {
+                  var y = parseInt(p.split('-')[0], 10);
+                  params.data_fim = y + '-12-31';
+                } else if (agr === 'mes') {
                   var parts = p.split('-');
                   if (parts.length >= 2) {
                     var y = parseInt(parts[0], 10);
@@ -296,54 +306,97 @@
       }
     }
     var BAR_HEIGHT_PX = 32;
-    function barChart(canvasId, arr, labelKey, valueKey, color, urlParamName) {
+    function barChart(canvasId, arr, labelKey, valueKey, color, urlParamName, maxLabelLen, paramValueKey) {
       arr = Array.isArray(arr) ? arr : [];
-      var labels = arr.map(function(x){ return (x[labelKey]||'').toString().substring(0,25); });
+      maxLabelLen = maxLabelLen || 25;
+      var labels = arr.map(function(x){ return (x[labelKey]||'').toString().substring(0, maxLabelLen); });
       var values = arr.map(function(x){ return Number(x[valueKey])||0; });
       var canvas = document.getElementById(canvasId);
       if (!canvas) return;
       if (labels.length === 0) { placeholder(canvasId, 'Sem dados'); return; }
       try {
         var h = Math.max(320, labels.length * BAR_HEIGHT_PX);
-        canvas.height = h;
-        canvas.width = Math.max(canvas.offsetWidth || 0, 400);
-        canvas.style.display = 'block';
         var wrap = canvas.parentElement;
-        if (wrap && wrap.classList && wrap.classList.contains('chart-canvas-wrap')) wrap.style.minHeight = h + 'px';
-        new Chart(canvas.getContext('2d'), {
+        if (wrap && wrap.classList && wrap.classList.contains('chart-canvas-wrap')) {
+          wrap.style.minHeight = h + 'px';
+          wrap.style.height = h + 'px';
+        }
+        canvas.style.display = 'block';
+        canvas.style.width = '100%';
+        canvas.style.height = h + 'px';
+        new Chart(canvas, {
           type: 'bar',
           data: { labels: labels, datasets: [{ label: 'Valor', data: values, backgroundColor: color, borderRadius: 6 }] },
           options: {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
+            layout: { padding: { left: 4, right: 8, top: 4, bottom: 4 } },
             barPercentage: 0.9,
             categoryPercentage: 1,
             onClick: function(evt, elements, chart) {
               if (elements.length === 0 || !urlParamName) return;
               var idx = elements[0].index;
-              var rawValue = (arr[idx] && arr[idx][labelKey] != null) ? String(arr[idx][labelKey]) : '';
-              if (!rawValue) return;
-              var params = getCurrentParams();
-              params[urlParamName] = rawValue;
+              var rawLabel = (arr[idx] && arr[idx][labelKey] != null) ? String(arr[idx][labelKey]) : '';
+              var paramVal = (paramValueKey && arr[idx] && arr[idx][paramValueKey] != null) ? String(arr[idx][paramValueKey]) : rawLabel;
+              if (!paramVal) return;
+              var params = getParamsFromForm();
+              params[urlParamName] = paramVal;
               redirectWithParams(params);
             },
-            plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c){ return 'R$ ' + (c.raw||0).toLocaleString('pt-BR',{minimumFractionDigits:2}); } } } },
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c){ var lbl = (arr[c.dataIndex] && arr[c.dataIndex][labelKey]) ? String(arr[c.dataIndex][labelKey]) : ''; return (lbl ? lbl + ': ' : '') + 'R$ ' + (c.raw||0).toLocaleString('pt-BR',{minimumFractionDigits:2}); } } } },
             scales: { x: { beginAtZero: true, ticks: { callback: function(v){ return formatBr(v); }, font: { size: 10 } } }, y: { ticks: { font: { size: 11 }, autoSkip: false } } }
           }
         });
       } catch (e) { placeholder(canvasId, 'Erro'); }
     }
-    barChart('chartCliente', parseJsonScript('top-clientes-data'), 'cliente', 'valor', '#27ae60', 'cliente');
+    barChart('chartCliente', parseJsonScript('top-clientes-data'), 'cliente', 'valor', '#27ae60', 'cliente', 55, 'cliente_value');
     barChart('chartFornecedor', parseJsonScript('top-fornecedores-data'), 'fornecedor', 'valor', '#9b59b6', 'fornecedor');
     barChart('chartProduto', parseJsonScript('top-produtos-data'), 'produto', 'valor', '#1abc9c', 'produto');
     barChart('chartSupervisor', parseJsonScript('vendas-supervisor-data'), 'supervisor', 'valor', '#e67e22', 'supervisor');
     barChart('chartVendedor', parseJsonScript('top-vendedores-data'), 'vendedor', 'valor', '#e74c3c', 'vendedor');
   }
+  function resizeAllCharts() {
+    if (typeof Chart === 'undefined') return;
+    ['chartVendasDia','chartCliente','chartFornecedor','chartProduto','chartSupervisor','chartVendedor'].forEach(function(id) {
+      var canvas = document.getElementById(id);
+      if (canvas) {
+        var chart = Chart.getChart(canvas);
+        if (chart) chart.resize();
+      }
+    });
+  }
+  function setupChartResize() {
+    var main = document.querySelector('.app-main');
+    if (main && typeof ResizeObserver !== 'undefined') {
+      var ro = new ResizeObserver(function() {
+        resizeAllCharts();
+        setTimeout(resizeAllCharts, 100);
+      });
+      ro.observe(main);
+    }
+    var sidebar = document.getElementById('app-sidebar');
+    if (sidebar) {
+      function onSidebarResize() {
+        resizeAllCharts();
+        setTimeout(resizeAllCharts, 150);
+        setTimeout(resizeAllCharts, 400);
+      }
+      sidebar.addEventListener('transitionend', function(e) {
+        if (e.propertyName === 'width' || e.propertyName === 'min-width') onSidebarResize();
+      });
+      var btn = document.getElementById('sidebar-toggle');
+      if (btn) btn.addEventListener('click', function() { setTimeout(onSidebarResize, 50); });
+      var hamburger = document.getElementById('sidebar-hamburger');
+      if (hamburger) hamburger.addEventListener('click', function() { setTimeout(onSidebarResize, 50); });
+    }
+  }
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function(){ setTimeout(drawCharts, 150); });
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(function() { drawCharts(); setupChartResize(); }, 150);
+    });
   } else {
-    setTimeout(drawCharts, 150);
+    setTimeout(function() { drawCharts(); setupChartResize(); }, 150);
   }
 })();
 </script>
