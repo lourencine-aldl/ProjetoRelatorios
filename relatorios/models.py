@@ -91,7 +91,9 @@ class StgVendas(models.Model):
     secao = models.CharField(max_length=120, blank=True, db_index=True)
     categoria = models.CharField(max_length=120, blank=True, db_index=True)
     subcategoria = models.CharField(max_length=120, blank=True)
+    codcliente = models.CharField('Código cliente', max_length=40, blank=True, db_index=True)
     cliente = models.CharField(max_length=120, blank=True, db_index=True)
+    cliente_formatado = models.CharField('Cliente formatado (CodCli - Nome)', max_length=250, blank=True)
 
     # Auditoria
     created_at = models.DateTimeField(auto_now_add=True)

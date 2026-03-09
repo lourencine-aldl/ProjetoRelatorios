@@ -1,0 +1,49 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<p>
+  <a href="{{ edit_user_url }}">Editar dados do usuário</a> &nbsp;|&nbsp;
+  <a href="{{ add_access_url }}">Adicionar acesso a links</a> (abre a lista de Recursos PBI; edite cada link e inclua este usuário em «Usuários com acesso»).
+</p>
+
+<p style="color:#666;">Abaixo apenas os links disponíveis para este usuário. Marque os que deseja remover o acesso e use «Remover acesso dos selecionados». Para dar acesso a mais links, use «Adicionar acesso a links».</p>
+
+<form method="post" action="">
+  {% csrf_token %}
+  <div class="module" style="margin-bottom: 1.5rem;">
+    <table style="width: 100%;">
+      <thead>
+        <tr>
+          <th style="width: 2rem;"></th>
+          <th>Nome</th>
+          <th>Descrição</th>
+          <th>URL</th>
+          <th>Ordenar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for link in links %}
+        <tr>
+          <td><input type="checkbox" name="link_ids" value="{{ link.pk }}"></td>
+          <td>{{ link.nome }}</td>
+          <td>{{ link.descricao|default:"—" }}</td>
+          <td>{% if link.url %}{{ link.url|truncatechars:50 }}{% else %}—{% endif %}</td>
+          <td><input type="number" name="ordem_{{ link.pk }}" value="{{ link.ordem }}" min="0" step="1" style="width: 4rem;"></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5">Nenhum link atribuído a este usuário. Use «Adicionar acesso a links» para atribuir.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="submit-row">
+    <input type="submit" value="Salvar ordem e/ou remover acesso" class="default">
+    <a href="{{ add_access_url }}" class="button">Adicionar acesso a links</a>
+    <a href="{% url 'admin:auth_user_changelist' %}" class="button">Voltar à lista de usuários</a>
+  </div>
+  <p style="color:#666; margin-top: 0.5rem;">Altere os números em «Ordenar», marque os links a remover (se quiser) e clique em «Salvar ordem e/ou remover acesso».</p>
+</form>
+{% endblock %}

@@ -14,4 +14,5 @@ urlpatterns = [
     path('atualizar-dados/', views.atualizar_dados_view, name='atualizar_dados'),
     # API REST (JSON)
     path('api/dashboard/', DashboardAPIView.as_view(), name='api_dashboard'),
+    path('api/busca-clientes/', views.api_busca_clientes, name='api_busca_clientes'),
 ]

@@ -63,6 +63,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'relatorios.context_processors.pbi_menu',
+                'relatorios.context_processors.sidebar_filters_default',
             ],
         },
     },
@@ -108,6 +109,10 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static'] if (BASE_DIR / 'static').exists() else []
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Em HTTP (sem HTTPS) o browser ignora Cross-Origin-Opener-Policy e mostra aviso.
+# Desativar o cabeçalho para evitar o aviso em desenvolvimento / HTTP.
+SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

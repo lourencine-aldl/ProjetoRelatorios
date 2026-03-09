@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exemplo: Filtro com busca dentro</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; padding: 2rem; background: #f1f5f9; }
+    .exemplo { max-width: 320px; }
+    .field { margin-bottom: 1rem; }
+    .field label { display: block; font-size: 0.75rem; font-weight: 600; color: #475569; margin-bottom: 0.35rem; }
+    .dropdown-combo { position: relative; width: 100%; overflow: visible; }
+    .dropdown-trigger {
+      width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px;
+      background: #fff; color: #334155; font-size: 0.875rem; text-align: left; cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .dropdown-trigger:hover { background: #f8fafc; }
+    .dropdown-trigger::after { content: '▾'; font-size: 0.7rem; color: #64748b; }
+    .dropdown-panel {
+      display: none; position: absolute; left: 0; right: 0; top: 100%; margin-top: 4px; z-index: 100;
+      background: #1e293b; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3); overflow: hidden; max-height: 280px; flex-direction: column;
+    }
+    .dropdown-panel.open { display: flex; }
+    .dropdown-panel .dropdown-pesquisa {
+      flex-shrink: 0; margin: 0; border: none; border-bottom: 1px solid rgba(255,255,255,0.2);
+      padding: 0.5rem 0.65rem; font-size: 0.875rem;
+      background: rgba(0,0,0,0.2); color: #fff; width: 100%;
+    }
+    .dropdown-panel .dropdown-pesquisa::placeholder { color: rgba(255,255,255,0.6); }
+    .dropdown-list { overflow-y: auto; max-height: 220px; padding: 0.25rem 0; }
+    .dropdown-option {
+      padding: 0.45rem 0.65rem; color: rgba(255,255,255,0.9); cursor: pointer; font-size: 0.8125rem;
+    }
+    .dropdown-option:hover { background: rgba(255,255,255,0.1); }
+    .dropdown-option.hidden { display: none; }
+    .dropdown-select-native { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+    .legenda { margin-top: 2rem; padding: 1rem; background: #e0f2fe; border-radius: 8px; font-size: 0.875rem; color: #0369a1; }
+  </style>
+</head>
+<body>
+  <h1 style="margin-top:0;">Exemplo: Filtro com busca <strong>dentro</strong></h1>
+  <p style="color:#64748b;">Clique no botão abaixo. O campo "Digite para buscar..." aparece <strong>dentro</strong> do painel que abre.</p>
+
+  <div class="exemplo">
+    <div class="field">
+      <label>Vendedor</label>
+      <div class="dropdown-combo">
+        <button type="button" class="dropdown-trigger">Todos</button>
+        <div class="dropdown-panel">
+          <input type="text" class="dropdown-pesquisa" placeholder="Digite para buscar..." autocomplete="off">
+          <div class="dropdown-list">
+            <div class="dropdown-option" data-value="">Todos</div>
+            <div class="dropdown-option" data-value="Ana">Ana Silva</div>
+            <div class="dropdown-option" data-value="Bruno">Bruno Santos</div>
+            <div class="dropdown-option" data-value="Carlos">Carlos Oliveira</div>
+            <div class="dropdown-option" data-value="Daniela">Daniela Costa</div>
+            <div class="dropdown-option" data-value="Eduardo">Eduardo Lima</div>
+            <div class="dropdown-option" data-value="Fernanda">Fernanda Souza</div>
+            <div class="dropdown-option" data-value="Gabriel">Gabriel Pereira</div>
+            <div class="dropdown-option" data-value="Helena">Helena Martins</div>
+            <div class="dropdown-option" data-value="Igor">Igor Ferreira</div>
+            <div class="dropdown-option" data-value="Julia">Julia Rocha</div>
+          </div>
+        </div>
+        <select class="dropdown-select-native">
+          <option value="">Todos</option>
+          <option value="Ana">Ana Silva</option>
+          <option value="Bruno">Bruno Santos</option>
+          <option value="Carlos">Carlos Oliveira</option>
+          <option value="Daniela">Daniela Costa</option>
+          <option value="Eduardo">Eduardo Lima</option>
+          <option value="Fernanda">Fernanda Souza</option>
+          <option value="Gabriel">Gabriel Pereira</option>
+          <option value="Helena">Helena Martins</option>
+          <option value="Igor">Igor Ferreira</option>
+          <option value="Julia">Julia Rocha</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="legenda">
+    <strong>Como usar:</strong> Clique em "Todos" → abre o painel → no topo do painel aparece <strong>"Digite para buscar..."</strong> → digite para filtrar a lista (ex.: "ana") → clique em uma opção para escolher.
+  </div>
+
+  <script>
+  (function(){
+    var combo = document.querySelector('.dropdown-combo');
+    var trigger = combo.querySelector('.dropdown-trigger');
+    var panel = combo.querySelector('.dropdown-panel');
+    var inp = panel.querySelector('.dropdown-pesquisa');
+    var list = panel.querySelector('.dropdown-list');
+    var sel = combo.querySelector('select');
+    function filterOptions(){
+      var v = (inp.value || '').toLowerCase();
+      list.querySelectorAll('.dropdown-option').forEach(function(div){
+        var match = !v || (div.textContent || '').toLowerCase().indexOf(v) >= 0;
+        div.classList.toggle('hidden', !match);
+      });
+    }
+    list.querySelectorAll('.dropdown-option').forEach(function(div){
+      div.addEventListener('click', function(){
+        sel.value = div.getAttribute('data-value') || '';
+        trigger.textContent = div.textContent ? div.textContent.trim() : 'Todos';
+        panel.classList.remove('open');
+        inp.value = '';
+        filterOptions();
+      });
+    });
+    inp.addEventListener('input', filterOptions);
+    inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') e.preventDefault(); });
+    trigger.addEventListener('click', function(e){
+      e.preventDefault();
+      panel.classList.toggle('open');
+      if (panel.classList.contains('open')) { inp.value = ''; filterOptions(); inp.focus(); }
+    });
+    document.addEventListener('click', function(e){ if (!combo.contains(e.target)) panel.classList.remove('open'); });
+  })();
+  </script>
+</body>
+</html>

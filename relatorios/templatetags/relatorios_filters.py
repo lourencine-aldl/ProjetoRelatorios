@@ -42,6 +42,19 @@ def _abreviar(n):
 
 
 @register.filter
+def cliente_display(value):
+    """Exibe valor do filtro cliente: 'cod|nome' vira 'cod - nome'; '|nome' (sem código) vira 'nome'."""
+    if value is None:
+        return ''
+    s = str(value).strip()
+    if '|' not in s:
+        return s
+    parts = s.split('|', 1)
+    cod, nome = (parts[0] or '').strip(), (parts[1] or '').strip()
+    return (cod + ' - ' + nome) if cod else nome
+
+
+@register.filter
 def br_currency(value):
     """R$ 1.234,56 (valor monetário com 2 decimais)."""
     if value is None:

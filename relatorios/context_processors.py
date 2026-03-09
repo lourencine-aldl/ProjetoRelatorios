@@ -1,5 +1,22 @@
 # -*- coding: utf-8 -*-
-"""Context processors para templates (ex.: mostrar menu Dashboard PBI)."""
+"""Context processors para templates (ex.: mostrar menu Dashboard PBI, dados da sidebar)."""
+
+
+def sidebar_filters_default(request):
+    """
+    Garante variáveis da sidebar de filtros em todas as páginas (para o include _sidebar_filters.html).
+    As views (dashboard, relatorio_detalhado) sobrescrevem com dados reais; as demais usam listas vazias.
+    """
+    if not getattr(request, 'user', None) or not request.user.is_authenticated:
+        return {}
+    return {
+        'clientes': [],
+        'fornecedores_opcoes': [],
+        'produtos': [],
+        'selected_clientes': [],
+        'selected_fornecedores': [],
+        'selected_produtos': [],
+    }
 
 
 def pbi_menu(request):

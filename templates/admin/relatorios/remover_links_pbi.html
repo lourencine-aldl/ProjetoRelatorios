@@ -1,0 +1,38 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<p><strong>Usuário(s) selecionado(s):</strong> {% for u in users %}{{ u.username }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+<p>Lista apenas os <strong>links a que estes usuários têm acesso</strong>. Marque os que deseja remover e clique em "Remover acesso".</p>
+
+<form method="post" action="?ids={{ ids }}">
+  {% csrf_token %}
+  <input type="hidden" name="ids" value="{{ ids }}">
+  <div class="module" style="margin-bottom: 1.5rem;">
+    <table style="width: 100%;">
+      <thead>
+        <tr>
+          <th style="width: 2rem;"></th>
+          <th>Link (Recurso PBI)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for link in links %}
+        <tr>
+          <td><input type="checkbox" name="link_ids" value="{{ link.pk }}"></td>
+          <td>{{ link.nome }}{% if link.descricao %} — {{ link.descricao }}{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="2">Nenhum link atribuído a estes usuários. Não há o que remover.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="submit-row">
+    <input type="submit" value="Remover acesso aos links marcados" class="default">
+    <a href="{% url 'admin:auth_user_changelist' %}" class="button">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
